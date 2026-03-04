@@ -1,0 +1,184 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+    background: transparent;
+  }
+
+  body {
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 2px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
+}
+
+@layer components {
+  .glass {
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+
+  .glass-light {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .ghostly-gradient {
+    background: linear-gradient(135deg, #00ff88 0%, #00cc6a 100%);
+  }
+
+  .ghostly-gradient-text {
+    background: linear-gradient(135deg, #00ff88 0%, #00cc6a 50%, #00ff88 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .ghostly-border {
+    border: 1px solid rgba(0, 255, 136, 0.2);
+  }
+
+  .ghostly-glow {
+    box-shadow:
+      0 0 20px rgba(0, 255, 136, 0.15),
+      0 0 60px rgba(0, 255, 136, 0.05);
+  }
+
+  .btn-primary {
+    @apply px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200;
+    background: rgba(0, 255, 136, 0.15);
+    color: #00ff88;
+    border: 1px solid rgba(0, 255, 136, 0.3);
+  }
+
+  .btn-primary:hover {
+    background: rgba(0, 255, 136, 0.25);
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.2);
+  }
+
+  .btn-primary:active {
+    background: rgba(0, 255, 136, 0.3);
+  }
+
+  .btn-ghost {
+    @apply px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .btn-ghost:hover {
+    color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .input-field {
+    @apply w-full px-3 py-2 rounded-lg text-sm transition-all duration-200;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .input-field::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+  }
+
+  .input-field:focus {
+    outline: none;
+    border-color: rgba(0, 255, 136, 0.4);
+    box-shadow: 0 0 0 1px rgba(0, 255, 136, 0.15);
+  }
+
+  .card {
+    @apply rounded-xl p-4 transition-all duration-200;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .card:hover {
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .settings-select {
+    @apply w-full px-3 py-2 rounded-lg text-xs font-mono transition-all duration-200;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.8);
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .settings-select:focus {
+    outline: none;
+    border-color: rgba(0, 255, 136, 0.3);
+  }
+
+  .settings-select option {
+    background: #1a1a1e;
+    color: #e0e0e0;
+  }
+
+  .settings-input {
+    @apply w-full px-3 py-2 rounded-lg text-xs font-mono transition-all duration-200;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  .settings-input::placeholder {
+    color: rgba(255, 255, 255, 0.25);
+  }
+
+  .settings-input:focus {
+    outline: none;
+    border-color: rgba(0, 255, 136, 0.3);
+  }
+
+  /* Title bar drag region */
+  .drag-region {
+    -webkit-app-region: drag;
+  }
+
+  .no-drag {
+    -webkit-app-region: no-drag;
+  }
+}
+
+@layer utilities {
+  .animate-in {
+    animation:
+      fadeIn 0.2s ease-out,
+      slideUp 0.3s ease-out;
+  }
+}

@@ -1,0 +1,75 @@
+import { ipcMain } from "electron";
+import { captureFullScreen, captureRegion } from "./capture";
+import Store from "electron-store";
+
+const store = new Store({
+  name: "ghostly-data",
+  encryptionKey: "ghostly-secure-key-v1",
+  defaults: {
+    settings: {
+      activeProvider: "gemini",
+      activeModel: "gemini-2.0-flash",
+      interviewType: "dsa",
+      language: "python",
+      apiKeys: {
+        gemini: "",
+        openai: "",
+        anthropic: "",
+        groq: "",
+      },
+    },
+    history: [],
+  },
+});
+
+export function registerIpcHandlers(): void {
+  // Full-screen capture
+  ipcMain.handle("ghostly:capture-fullscreen", async () => {
+    try {
+      return await captureFullScreen();
+    } catch (error) {
+      console.error("Failed to capture fullscreen:", error);
+      throw error;
+    }
+  });
+
+  // Legacy capture handlers (kept for compatibility)
+  ipcMain.handle("capture-screen", async () => {
+    try {
+      return await captureFullScreen();
+    } catch (error) {
+      console.error("Failed to capture screen:", error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle(
+    "capture-region",
+    async (_event, x: number, y: number, width: number, height: number) => {
+      try {
+        return await captureRegion(x, y, width, height);
+      } catch (error) {
+        console.error("Failed to capture region:", error);
+        throw error;
+      }
+    },
+  );
+
+  // Settings
+  ipcMain.handle("get-settings", () => {
+    return store.get("settings");
+  });
+
+  ipcMain.handle("save-settings", (_event, settings: any) => {
+    store.set("settings", settings);
+  });
+
+  // History
+  ipcMain.handle("get-history", () => {
+    return store.get("history") || [];
+  });
+
+  ipcMain.handle("save-history", (_event, history: any[]) => {
+    store.set("history", history);
+  });
+}
