@@ -132,6 +132,8 @@ Structure your response using the STAR method:
 // e.g. "Reduced API response time from 1.2s to 180ms, improving checkout conversion by 12%"
 
 Keep the total response concise enough for a 2-minute verbal answer (~250 words).`,
+
+    general: `You are a helpful AI coding assistant and expert. Please provide a clear, concise, and accurate answer to the user's prompt or question. Format your response cleanly using markdown. If you are reviewing code or suggesting changes, provide the code within proper markdown blocks.`,
   };
 
   return variants[type] ?? base;

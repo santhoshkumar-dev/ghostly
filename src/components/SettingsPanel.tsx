@@ -2,12 +2,13 @@ import React, { useEffect } from "react";
 import { useStore } from "../store/useStore";
 import { getProvider, type ProviderName } from "../lib/ai";
 
-const INTERVIEW_TYPES = [
+export const INTERVIEW_TYPES = [
   { id: "dsa", label: "DSA / Algorithms" },
   { id: "system_design", label: "System Design" },
   { id: "frontend", label: "Frontend" },
   { id: "sql", label: "SQL" },
   { id: "behavioral", label: "Behavioral" },
+  { id: "general", label: "General" },
 ];
 
 const LANGUAGES = [

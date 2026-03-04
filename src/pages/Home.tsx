@@ -47,10 +47,12 @@ export const Home: React.FC = () => {
         return;
       }
 
-      if (screenshotList.length === 0) {
+      const isGeneral = settings.interviewType === "general";
+      if (!isGeneral && screenshotList.length === 0) {
         setError(
           "No screenshots yet. Press Ctrl+H to take a screenshot first.",
         );
+        setIsStreaming(false);
         return;
       }
 
@@ -58,7 +60,10 @@ export const Home: React.FC = () => {
       setError(null);
       setIsStreaming(true);
 
-      const prompt = buildPrompt(settings.interviewType, settings.language);
+      const prompt =
+        settings.interviewType === "general"
+          ? settings.customInstructions || "Please answer the general question."
+          : buildPrompt(settings.interviewType, settings.language);
 
       try {
         const provider = getProvider(settings.activeProvider);
@@ -72,7 +77,7 @@ export const Home: React.FC = () => {
           prompt,
           model: settings.activeModel,
           apiKey,
-          mimeType: "image/png",
+          mimeType: latestScreenshot ? "image/png" : undefined,
         });
 
         for await (const chunk of stream) {
@@ -127,12 +132,6 @@ export const Home: React.FC = () => {
     // Ctrl+Enter — solve with all accumulated screenshots
     const offSolve = window.ghostly.onSolve(async () => {
       const shots = screenshotsRef.current;
-      if (shots.length === 0) {
-        setError(
-          "No screenshots yet. Press Ctrl+H to take a screenshot first.",
-        );
-        return;
-      }
       setCurrentSolution("");
       await runAIStream(shots);
     });

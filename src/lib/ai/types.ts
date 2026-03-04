@@ -4,7 +4,7 @@ export interface AIMessage {
 }
 
 export interface AIRequestOptions {
-  base64Image: string;
+  base64Image?: string;
   mimeType?: string;
   prompt: string;
   model: string;

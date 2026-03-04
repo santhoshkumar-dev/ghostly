@@ -15,9 +15,16 @@ export interface Solution {
 export interface Settings {
   activeProvider: ProviderName;
   activeModel: string;
-  interviewType: "dsa" | "system_design" | "frontend" | "sql" | "behavioral";
+  interviewType:
+    | "dsa"
+    | "system_design"
+    | "frontend"
+    | "sql"
+    | "behavioral"
+    | "general";
   language: "python" | "javascript" | "typescript" | "java" | "cpp" | "go";
   apiKeys: Record<ProviderName, string>;
+  customInstructions?: string;
 }
 
 interface GhostlyStore {
@@ -79,6 +86,7 @@ export const useStore = create<GhostlyStore>((set) => ({
     interviewType: "dsa",
     language: "python",
     apiKeys: { gemini: "", openai: "", anthropic: "", groq: "" },
+    customInstructions: "",
   },
 
   // Session actions

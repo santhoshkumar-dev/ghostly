@@ -14,9 +14,17 @@ export class GroqProvider implements AIProvider {
   async *streamSolution(options: AIRequestOptions): AsyncGenerator<string> {
     const { base64Image, prompt, model, apiKey, maxTokens = 4096 } = options;
 
-    const imageUrl = base64Image.startsWith("data:")
+    const imageUrl = base64Image?.startsWith("data:")
       ? base64Image
-      : `data:image/png;base64,${base64Image}`;
+      : base64Image
+        ? `data:image/png;base64,${base64Image}`
+        : undefined;
+
+    const content: any[] = [];
+    if (imageUrl) {
+      content.push({ type: "image_url", image_url: { url: imageUrl } });
+    }
+    content.push({ type: "text", text: prompt });
 
     const response = await fetch(
       "https://api.groq.com/openai/v1/chat/completions",
@@ -33,10 +41,7 @@ export class GroqProvider implements AIProvider {
           messages: [
             {
               role: "user",
-              content: [
-                { type: "image_url", image_url: { url: imageUrl } },
-                { type: "text", text: prompt },
-              ],
+              content,
             },
           ],
         }),

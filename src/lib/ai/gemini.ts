@@ -25,22 +25,26 @@ export class GeminiProvider implements AIProvider {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
 
     // Strip data URL prefix if present
-    const imageData = base64Image.includes(",")
+    const imageData = base64Image?.includes(",")
       ? base64Image.split(",")[1]
       : base64Image;
+
+    const parts = imageData
+      ? [
+          {
+            inline_data: {
+              mime_type: mimeType,
+              data: imageData,
+            },
+          },
+          { text: prompt },
+        ]
+      : [{ text: prompt }];
 
     const body = {
       contents: [
         {
-          parts: [
-            {
-              inline_data: {
-                mime_type: mimeType,
-                data: imageData,
-              },
-            },
-            { text: prompt },
-          ],
+          parts,
         },
       ],
       generationConfig: {
