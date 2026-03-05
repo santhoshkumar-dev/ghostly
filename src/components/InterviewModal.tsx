@@ -84,7 +84,7 @@ export const InterviewModal: React.FC<InterviewModalProps> = ({ onClose, onSubmi
                   key={msg.id} 
                   className={`flex w-full ${msg.source === 'mic' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                  <div className={`max-w-[80%] rounded-2xl px-4 py-3 flex flex-col ${
                     msg.source === 'mic' 
                       ? 'bg-blue-500/20 text-blue-100 border border-blue-500/30 rounded-br-sm' 
                       : 'bg-white/[0.05] text-white/80 border border-white/[0.08] rounded-bl-sm'
@@ -95,6 +95,16 @@ export const InterviewModal: React.FC<InterviewModalProps> = ({ onClose, onSubmi
                     <div className="text-sm leading-relaxed">
                       {msg.text}
                     </div>
+                    
+                    {/* Debug Audio Player */}
+                    {msg.audioUrl && (
+                      <audio 
+                        controls 
+                        src={msg.audioUrl} 
+                        className="h-7 w-full max-w-[200px] mt-3 opacity-60 hover:opacity-100 transition-opacity" 
+                        style={{ filter: "invert(100%)" }} // Simple hack to make native audio player look slightly better on dark backgrounds
+                      />
+                    )}
                   </div>
                 </div>
               ))}
