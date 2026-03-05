@@ -43,6 +43,15 @@ const PROVIDERS = [
   },
 ];
 
+const WHISPER_MODELS = [
+  { id: "Xenova/whisper-tiny.en", label: "Tiny (English-only, fastest)" },
+  { id: "Xenova/whisper-base.en", label: "Base (English-only, balanced)" },
+  { id: "Xenova/whisper-small.en", label: "Small (English-only, accurate)" },
+  { id: "Xenova/whisper-tiny", label: "Tiny (Multilingual)" },
+  { id: "Xenova/whisper-base", label: "Base (Multilingual)" },
+  { id: "Xenova/whisper-small", label: "Small (Multilingual)" },
+];
+
 const SHORTCUTS = [
   { label: "Ask AI", keys: ["Ctrl", "↵"] },
   { label: "Start Over", keys: ["Ctrl", "G"] },
@@ -71,14 +80,16 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
   useEffect(() => {
     const getMics = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
         const devices = await navigator.mediaDevices.enumerateDevices();
-        setMics(devices.filter(d => d.kind === 'audioinput'));
-        stream.getTracks().forEach(track => track.stop());
+        setMics(devices.filter((d) => d.kind === "audioinput"));
+        stream.getTracks().forEach((track) => track.stop());
       } catch (err) {
         console.error("Microphone access denied or error:", err);
         const devices = await navigator.mediaDevices.enumerateDevices();
-        setMics(devices.filter(d => d.kind === 'audioinput'));
+        setMics(devices.filter((d) => d.kind === "audioinput"));
       }
     };
     getMics();
@@ -87,12 +98,15 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
   // Close dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (micDropdownRef.current && !micDropdownRef.current.contains(event.target as Node)) {
+      if (
+        micDropdownRef.current &&
+        !micDropdownRef.current.contains(event.target as Node)
+      ) {
         setMicDropdownOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // Enable mouse for the ENTIRE time the settings panel is open
@@ -261,6 +275,24 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
           </select>
         </Section>
 
+        {/* Whisper Model */}
+        <Section label="Whisper Model">
+          <select
+            value={settings.whisperModel ?? "Xenova/whisper-base.en"}
+            onChange={(e) => updateSettings({ whisperModel: e.target.value })}
+            className="settings-select"
+          >
+            {WHISPER_MODELS.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+          <p className="text-[9px] text-white/30 mt-1">
+            Changing the model will reload the AI engine.
+          </p>
+        </Section>
+
         {/* Audio Input (Mic) */}
         <Section label="Audio Input (Mic)">
           <div
@@ -275,7 +307,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
               <span className="truncate">
                 {settings.micDeviceId === "default" || !settings.micDeviceId
                   ? "Default Microphone"
-                  : mics.find((m) => m.deviceId === settings.micDeviceId)?.label || "Unknown Microphone"}
+                  : mics.find((m) => m.deviceId === settings.micDeviceId)
+                      ?.label || "Unknown Microphone"}
               </span>
               <span className="text-[8px] opacity-60">▼</span>
             </button>

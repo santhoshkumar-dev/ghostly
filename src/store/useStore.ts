@@ -26,6 +26,7 @@ export interface Settings {
   apiKeys: Record<ProviderName, string>;
   customInstructions?: string;
   micDeviceId?: string;
+  whisperModel?: string;
 }
 
 interface GhostlyStore {
@@ -89,6 +90,7 @@ export const useStore = create<GhostlyStore>((set) => ({
     apiKeys: { gemini: "", openai: "", anthropic: "", groq: "" },
     customInstructions: "",
     micDeviceId: "default",
+    whisperModel: "Xenova/whisper-base.en",
   },
 
   // Session actions
