@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useStore } from "../store/useStore";
 import { getProvider, type ProviderName } from "../lib/ai";
 
@@ -60,7 +60,40 @@ interface SettingsPanelProps {
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
   const { settings, updateSettings, setApiKey } = useStore();
-  const [showKey, setShowKey] = React.useState(false);
+  const [showKey, setShowKey] = useState(false);
+
+  // Microphone selection state
+  const [mics, setMics] = useState<MediaDeviceInfo[]>([]);
+  const [micDropdownOpen, setMicDropdownOpen] = useState(false);
+  const micDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Fetch microphones
+  useEffect(() => {
+    const getMics = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        setMics(devices.filter(d => d.kind === 'audioinput'));
+        stream.getTracks().forEach(track => track.stop());
+      } catch (err) {
+        console.error("Microphone access denied or error:", err);
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        setMics(devices.filter(d => d.kind === 'audioinput'));
+      }
+    };
+    getMics();
+  }, []);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (micDropdownRef.current && !micDropdownRef.current.contains(event.target as Node)) {
+        setMicDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Enable mouse for the ENTIRE time the settings panel is open
   // This is the authoritative mouse state controller while visible
@@ -226,6 +259,64 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
               </option>
             ))}
           </select>
+        </Section>
+
+        {/* Audio Input (Mic) */}
+        <Section label="Audio Input (Mic)">
+          <div
+            className="relative"
+            ref={micDropdownRef}
+            style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+          >
+            <button
+              onClick={() => setMicDropdownOpen(!micDropdownOpen)}
+              className="w-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.12] rounded-lg px-3 py-2.5 text-[11px] text-white/80 font-mono outline-none cursor-pointer transition-colors flex items-center justify-between gap-2"
+            >
+              <span className="truncate">
+                {settings.micDeviceId === "default" || !settings.micDeviceId
+                  ? "Default Microphone"
+                  : mics.find((m) => m.deviceId === settings.micDeviceId)?.label || "Unknown Microphone"}
+              </span>
+              <span className="text-[8px] opacity-60">▼</span>
+            </button>
+
+            {micDropdownOpen && (
+              <div
+                className="absolute top-full mt-2 left-0 w-full bg-[rgba(30,30,30,0.95)] backdrop-blur-md border border-white/[0.12] rounded-xl shadow-xl overflow-hidden z-50 flex flex-col pointer-events-auto max-h-48 overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  onClick={() => {
+                    updateSettings({ micDeviceId: "default" });
+                    setMicDropdownOpen(false);
+                  }}
+                  className={`text-left px-3 py-2 text-[11px] font-mono transition-colors hover:bg-white/[0.08] truncate ${
+                    settings.micDeviceId === "default" || !settings.micDeviceId
+                      ? "bg-white/[0.04] text-white"
+                      : "text-white/70"
+                  }`}
+                >
+                  Default Microphone
+                </button>
+                {mics.map((t) => (
+                  <button
+                    key={t.deviceId}
+                    onClick={() => {
+                      updateSettings({ micDeviceId: t.deviceId });
+                      setMicDropdownOpen(false);
+                    }}
+                    className={`text-left px-3 py-2 text-[11px] font-mono transition-colors hover:bg-white/[0.08] truncate ${
+                      settings.micDeviceId === t.deviceId
+                        ? "bg-white/[0.04] text-white"
+                        : "text-white/70"
+                    }`}
+                  >
+                    {t.label || `Microphone (${t.deviceId.slice(0, 5)}...)`}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </Section>
 
         {/* Manage Prompts */}
