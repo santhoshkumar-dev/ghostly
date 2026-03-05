@@ -166,7 +166,7 @@ export const Home: React.FC = () => {
       <TopBar
         onOpenSettings={() => setSettingsOpen(true)}
         settingsOpen={settingsOpen}
-        onStartInterview={() => setInterviewOpen(true)}
+        onStartInterview={() => setInterviewOpen(!interviewOpen)}
       />
 
       {/* Settings Panel */}
@@ -183,27 +183,29 @@ export const Home: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Interview Modal */}
-      <AnimatePresence>
-        {interviewOpen && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.15 }}
-          >
-            <InterviewModal 
-              onClose={() => setInterviewOpen(false)} 
-              onSubmit={handleInterviewSubmit} 
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Content Area (only when settings/interview are closed) */}
-      {!settingsOpen && !interviewOpen && (
+      {/* Content Area (only when settings are closed) */}
+      {!settingsOpen && (
         <div className="flex justify-center mt-2">
           <div className="w-[860px] space-y-2">
+            
+            {/* Inline Interview Panel */}
+            <AnimatePresence>
+              {interviewOpen && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                  animate={{ opacity: 1, height: "auto", marginBottom: 8 }}
+                  exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                  className="overflow-hidden"
+                  transition={{ duration: 0.2 }}
+                >
+                  <InterviewModal 
+                    onClose={() => setInterviewOpen(false)} 
+                    onSubmit={handleInterviewSubmit} 
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Error */}
             <AnimatePresence>
               {error && (
@@ -224,7 +226,7 @@ export const Home: React.FC = () => {
               )}
             </AnimatePresence>
 
-            {/* Screenshots strip (shows all captured screenshots) */}
+            {/* Screenshots strip */}
             {screenshots.length > 0 && !currentSolution && !isStreaming && (
               <motion.div
                 initial={{ opacity: 0 }}
