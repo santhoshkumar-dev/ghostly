@@ -33,10 +33,20 @@ jobs:
       - name: Build Vite App
         run: npm run build
 
-      - name: Package and Publish with Electron Builder
+      - name: Package and Publish with Electron Builder (Windows/Linux)
+        if: matrix.os != 'macos-latest'
         env:
-          # This token is automatically provided by GitHub Actions
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        # The `--publish always` flag tells electron-builder to upload the built binaries to the GitHub Release
-        # corresponding to the tag.
         run: npm run package -- --publish always
+
+      - name: Package and Publish with Electron Builder (Mac x64)
+        if: matrix.os == 'macos-latest'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run package -- --mac --x64 --publish always
+
+      - name: Package and Publish with Electron Builder (Mac arm64)
+        if: matrix.os == 'macos-latest'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run package -- --mac --arm64 --publish always
