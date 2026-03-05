@@ -25,6 +25,7 @@ export interface Settings {
   language: "python" | "javascript" | "typescript" | "java" | "cpp" | "go";
   apiKeys: Record<ProviderName, string>;
   customInstructions?: string;
+  micDeviceId?: string;
 }
 
 interface GhostlyStore {
@@ -87,6 +88,7 @@ export const useStore = create<GhostlyStore>((set) => ({
     language: "python",
     apiKeys: { gemini: "", openai: "", anthropic: "", groq: "" },
     customInstructions: "",
+    micDeviceId: "default",
   },
 
   // Session actions

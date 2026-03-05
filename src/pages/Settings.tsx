@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useStore } from "../store/useStore";
 import { getProvider, type ProviderName } from "../lib/ai";
@@ -64,16 +64,54 @@ export const Settings: React.FC = () => {
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
   const [saved, setSaved] = useState(false);
 
+  // Microphone selection state
+  const [mics, setMics] = useState<MediaDeviceInfo[]>([]);
+  const [micDropdownOpen, setMicDropdownOpen] = useState(false);
+  const micDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Fetch microphones
+  useEffect(() => {
+    const getMics = async () => {
+      try {
+        // Temporarily request audio to get proper device labels
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        setMics(devices.filter(d => d.kind === 'audioinput'));
+        stream.getTracks().forEach(track => track.stop());
+      } catch (err) {
+        console.error("Microphone access denied or error:", err);
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        setMics(devices.filter(d => d.kind === 'audioinput'));
+      }
+    };
+    getMics();
+  }, []);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (micDropdownRef.current && !micDropdownRef.current.contains(event.target as Node)) {
+        setMicDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // Persist settings whenever they change
   useEffect(() => {
     const timer = setTimeout(() => {
-      window.ghostlyAPI.saveSettings(settings);
+      (window as any).ghostlyAPI?.saveSettings?.(settings) || window.ghostly.saveSettings(settings);
     }, 500);
     return () => clearTimeout(timer);
   }, [settings]);
 
   const handleSave = async () => {
-    await window.ghostlyAPI.saveSettings(settings);
+    if ((window as any).ghostlyAPI?.saveSettings) {
+      await (window as any).ghostlyAPI.saveSettings(settings);
+    } else {
+      await window.ghostly.saveSettings(settings);
+    }
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
@@ -307,6 +345,67 @@ export const Settings: React.FC = () => {
                 </span>
               </button>
             ))}
+          </div>
+        </section>
+
+        {/* Audio Input */}
+        <section>
+          <h2 className="text-sm font-semibold text-dark-300 uppercase tracking-wider mb-3">
+            Audio Input (Mic)
+          </h2>
+          <div
+            className="relative w-full"
+            ref={micDropdownRef}
+            style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+          >
+            <button
+              onClick={() => setMicDropdownOpen(!micDropdownOpen)}
+              className="bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.12] rounded-lg w-full px-4 py-3 text-xs text-white/80 font-mono outline-none cursor-pointer transition-colors flex items-center justify-between gap-2"
+            >
+              <span className="truncate">
+                {settings.micDeviceId === "default" || !settings.micDeviceId
+                  ? "Default Microphone"
+                  : mics.find((m) => m.deviceId === settings.micDeviceId)?.label || "Unknown Microphone"}
+              </span>
+              <span className="text-[10px] opacity-60">▼</span>
+            </button>
+
+            {micDropdownOpen && (
+              <div
+                className="absolute top-full mt-2 left-0 w-full bg-[rgba(30,30,30,0.95)] backdrop-blur-md border border-white/[0.12] rounded-xl shadow-xl overflow-hidden z-50 flex flex-col pointer-events-auto max-h-48 overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  onClick={() => {
+                    updateSettings({ micDeviceId: "default" });
+                    setMicDropdownOpen(false);
+                  }}
+                  className={`text-left px-4 py-3 text-xs font-mono transition-colors hover:bg-white/[0.08] ${
+                    settings.micDeviceId === "default" || !settings.micDeviceId
+                      ? "bg-white/[0.04] text-white"
+                      : "text-white/70"
+                  }`}
+                >
+                  Default Microphone
+                </button>
+                {mics.map((t) => (
+                  <button
+                    key={t.deviceId}
+                    onClick={() => {
+                      updateSettings({ micDeviceId: t.deviceId });
+                      setMicDropdownOpen(false);
+                    }}
+                    className={`text-left px-4 py-3 text-xs font-mono transition-colors hover:bg-white/[0.08] truncate ${
+                      settings.micDeviceId === t.deviceId
+                        ? "bg-white/[0.04] text-white"
+                        : "text-white/70"
+                    }`}
+                  >
+                    {t.label || `Microphone (${t.deviceId.slice(0, 5)}...)`}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 

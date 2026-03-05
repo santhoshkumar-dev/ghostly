@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useStore } from "../store/useStore";
 
 export interface ChatMessage {
   id: string;
@@ -97,8 +98,12 @@ export function useInterviewAudio() {
       }
 
       // 2. Mic Audio
+      const settings = useStore.getState().settings;
+      const micDeviceId = settings.micDeviceId;
+
       const micStream = await navigator.mediaDevices.getUserMedia({
         audio: {
+          deviceId: micDeviceId && micDeviceId !== "default" ? { exact: micDeviceId } : undefined,
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
