@@ -202,7 +202,6 @@ function setupVAD(
   let audioBuffer: Float32Array[] = [];
   let silenceFrames = 0;
   
-  // LOWERED THRESHOLD: 0.005 instead of 0.01 to ensure quiet voices are picked up
   const SILENCE_THRESHOLD = 0.005; 
   const MAX_SILENCE_FRAMES = 5; // ~1.25 seconds of silence
 
@@ -210,21 +209,12 @@ function setupVAD(
     const input = e.inputBuffer.getChannelData(0);
     
     let sum = 0;
-    // Check if the array is purely zeros (silent bug)
-    let isAllZeros = true;
     for (let i = 0; i < input.length; i++) {
-      if (input[i] !== 0) isAllZeros = false;
       sum += input[i] * input[i];
     }
     
-    if (isAllZeros && Math.random() < 0.01) {
-      // Log occasionally if we are receiving pure dead silence from the hardware
-      addLog(`[DEBUG] Received empty audio array from ${sourceName}`);
-    }
-
     const rms = Math.sqrt(sum / input.length);
 
-    // If volume is above threshold
     if (rms > SILENCE_THRESHOLD) {
       silenceFrames = 0;
       audioBuffer.push(new Float32Array(input));
@@ -245,19 +235,18 @@ function setupVAD(
           if (durationSeconds > 0.5) {
             const downsampled = resampleAudio(merged, audioCtx.sampleRate, 16000);
             
-            // Create a playable WAV file NO MATTER WHAT, even if Whisper fails
             const wavBlob = float32ToWav(downsampled, 16000);
             const audioUrl = URL.createObjectURL(wavBlob);
             
-            // Send to logs immediately so you can play it
             const debugName = `${sourceName} - ${durationSeconds.toFixed(1)}s`;
             addDebugAudio(debugName, audioUrl);
-            
             addLog(`Captured ${debugName}, sending to AI...`);
             
+            // CRITICAL FIX: To prevent the array from being flattened into an object by postMessage,
+            // we must pass the Float32Array's underlying buffer, and specify it in the transfer list.
             workerRef.current?.postMessage({
               type: "transcribe",
-              audio: downsampled,
+              audio: downsampled, // Transformers.js can ingest this directly if properly typed
               source: sourceName,
               audioUrl
             });
