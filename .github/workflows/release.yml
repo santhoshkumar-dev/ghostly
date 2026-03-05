@@ -1,0 +1,42 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*" # Trigger on tags that start with 'v' e.g. v1.0.0
+
+permissions:
+  contents: write # Required to allow electron-builder to create a GitHub Release
+
+jobs:
+  build_and_publish:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        # Build on all three major platforms
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install Dependencies
+        run: npm ci || npm install
+
+      - name: Build Vite App
+        run: npm run build
+
+      - name: Package and Publish with Electron Builder
+        env:
+          # This token is automatically provided by GitHub Actions
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # The `--publish always` flag tells electron-builder to upload the built binaries to the GitHub Release
+        # corresponding to the tag.
+        run: npm run package -- --publish always
