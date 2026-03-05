@@ -21,7 +21,32 @@ Analyze the problem in the screenshot and respond EXACTLY in this format:
 - Space: O(?) — [one line explanation why]
 
 ## Key Insight
-[one sentence on the core trick that makes this solution work]`;
+[one sentence on the core trick that makes this solution work]
+
+## Step-by-Step Explanation
+Explain the solution so that a developer can understand the entire reasoning process. Explain like you are mentoring a junior developer during a coding interview.
+
+1. Problem Understanding  
+   - What the problem is asking.
+
+2. Initial Idea  
+   - The first intuition or brute force idea.
+
+3. Optimized Strategy  
+   - Why the chosen algorithm works better.
+
+4. Data Structures Used  
+   - Explain why each structure is used.
+
+5. Code Walkthrough  
+   - Walk through the code line by line explaining what happens.
+
+6. Example Dry Run  
+   - Show how the algorithm works on a small example input.
+
+7. Edge Cases  
+   - Mention corner cases the solution handles.
+`;
 
   const variants: Record<string, string> = {
     dsa: `${base}
