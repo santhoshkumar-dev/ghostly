@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from "uuid";
 import { TopBar } from "../components/TopBar";
 import { SettingsPanel } from "../components/SettingsPanel";
 import { SolutionCard } from "../components/SolutionCard";
+import { InterviewModal } from "../components/InterviewModal";
 
 export const Home: React.FC = () => {
   const {
@@ -28,6 +29,7 @@ export const Home: React.FC = () => {
   } = useStore();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [interviewOpen, setInterviewOpen] = useState(false);
   const screenshotsRef = useRef<string[]>(screenshots);
 
   // Keep ref in sync
@@ -37,7 +39,7 @@ export const Home: React.FC = () => {
 
   // AI streaming function
   const runAIStream = useCallback(
-    async (screenshotList: string[]) => {
+    async (screenshotList: string[], transcriptOverride?: string) => {
       const apiKey = settings.apiKeys[settings.activeProvider];
       if (!apiKey) {
         setError(
@@ -48,7 +50,7 @@ export const Home: React.FC = () => {
       }
 
       const isGeneral = settings.interviewType === "general";
-      if (!isGeneral && screenshotList.length === 0) {
+      if (!isGeneral && screenshotList.length === 0 && !transcriptOverride) {
         setError(
           "No screenshots yet. Press Ctrl+H to take a screenshot first.",
         );
@@ -60,17 +62,21 @@ export const Home: React.FC = () => {
       setError(null);
       setIsStreaming(true);
 
-      const prompt =
-        settings.interviewType === "general"
-          ? settings.customInstructions || "Please answer the general question."
-          : buildPrompt(settings.interviewType, settings.language);
+      let prompt = "";
+      if (transcriptOverride) {
+        prompt = `Here is a live interview transcript. Please provide a brief, excellent answer to the interviewer's most recent question, considering the context of the whole conversation:\n\n${transcriptOverride}`;
+      } else {
+        prompt = settings.interviewType === "general"
+            ? settings.customInstructions || "Please answer the general question."
+            : buildPrompt(settings.interviewType, settings.language);
+      }
 
       try {
         const provider = getProvider(settings.activeProvider);
         let fullSolution = "";
 
-        // Use the latest screenshot for the AI call
-        const latestScreenshot = screenshotList[screenshotList.length - 1];
+        // Use the latest screenshot for the AI call (if it exists)
+        const latestScreenshot = screenshotList.length > 0 ? screenshotList[screenshotList.length - 1] : undefined;
 
         const stream = provider.streamSolution({
           base64Image: latestScreenshot,
@@ -93,7 +99,7 @@ export const Home: React.FC = () => {
           solution: fullSolution,
           provider: settings.activeProvider,
           model: settings.activeModel,
-          interviewType: settings.interviewType,
+          interviewType: transcriptOverride ? "live-interview" : settings.interviewType,
           language: settings.language,
         };
         addToHistory(entry);
@@ -121,6 +127,12 @@ export const Home: React.FC = () => {
       addToHistory,
     ],
   );
+
+  const handleInterviewSubmit = useCallback(async (transcript: string) => {
+    setInterviewOpen(false);
+    // Inject transcript as the prompt context, ignoring screenshots if any
+    await runAIStream([], transcript);
+  }, [runAIStream]);
 
   // Listen for hotkey events from main process
   useEffect(() => {
@@ -154,6 +166,7 @@ export const Home: React.FC = () => {
       <TopBar
         onOpenSettings={() => setSettingsOpen(true)}
         settingsOpen={settingsOpen}
+        onStartInterview={() => setInterviewOpen(true)}
       />
 
       {/* Settings Panel */}
@@ -170,8 +183,25 @@ export const Home: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Content Area (only when settings is closed) */}
-      {!settingsOpen && (
+      {/* Interview Modal */}
+      <AnimatePresence>
+        {interviewOpen && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+          >
+            <InterviewModal 
+              onClose={() => setInterviewOpen(false)} 
+              onSubmit={handleInterviewSubmit} 
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Content Area (only when settings/interview are closed) */}
+      {!settingsOpen && !interviewOpen && (
         <div className="flex justify-center mt-2">
           <div className="w-[860px] space-y-2">
             {/* Error */}
