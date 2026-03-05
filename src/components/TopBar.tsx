@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useStore } from "../store/useStore";
 import { INTERVIEW_TYPES } from "./SettingsPanel";
+import logo from "../assets/logo.png";
 
 interface TopBarProps {
   onOpenSettings: () => void;
@@ -82,7 +83,11 @@ export const TopBar: React.FC<TopBarProps> = ({
             className="flex items-center gap-2 bg-[#ff9f43] hover:bg-[#ffb067] transition-colors rounded-full px-3 py-1 text-[11px] text-black font-semibold cursor-pointer"
             style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
           >
-            <span>👻</span>
+            <img
+              src={logo}
+              className="w-4 h-4 object-contain brightness-0 opacity-80"
+              alt="Ghostly"
+            />
             <span>Start Interview</span>
           </div>
 
