@@ -5,6 +5,7 @@ export interface ChatMessage {
   source: "mic" | "system";
   text: string;
   timestamp: number;
+  audioUrl?: string; // For debugging playback
 }
 
 export function useInterviewAudio() {
@@ -25,7 +26,7 @@ export function useInterviewAudio() {
     });
 
     workerRef.current.onmessage = (e) => {
-      const { type, message, result, source, text } = e.data;
+      const { type, message, result, source, text, audioUrl } = e.data;
       if (type === "log") addLog(message);
       if (type === "ready") {
         addLog("AI Engine Ready.");
@@ -34,7 +35,7 @@ export function useInterviewAudio() {
       if (type === "result" && text) {
         setMessages((prev) => [
           ...prev,
-          { id: crypto.randomUUID(), source, text, timestamp: Date.now() },
+          { id: crypto.randomUUID(), source, text, timestamp: Date.now(), audioUrl },
         ]);
       }
     };
@@ -150,6 +151,40 @@ function resampleAudio(audioBuffer: Float32Array, originalSampleRate: number, ta
   return result;
 }
 
+// Function to encode Float32Array into a playable WAV Blob
+function float32ToWav(samples: Float32Array, sampleRate: number): Blob {
+  const buffer = new ArrayBuffer(44 + samples.length * 2);
+  const view = new DataView(buffer);
+
+  const writeString = (view: DataView, offset: number, string: string) => {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i));
+    }
+  };
+
+  writeString(view, 0, 'RIFF');
+  view.setUint32(4, 36 + samples.length * 2, true);
+  writeString(view, 8, 'WAVE');
+  writeString(view, 12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // format (1 = PCM)
+  view.setUint16(22, 1, true); // channels (1 = mono)
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true); // byte rate
+  view.setUint16(32, 2, true); // block align
+  view.setUint16(34, 16, true); // bits per sample
+  writeString(view, 36, 'data');
+  view.setUint32(40, samples.length * 2, true);
+
+  let offset = 44;
+  for (let i = 0; i < samples.length; i++, offset += 2) {
+    let s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+  }
+
+  return new Blob([view], { type: 'audio/wav' });
+}
+
 // Voice Activity Detector (VAD) Helper
 function setupVAD(
   audioCtx: AudioContext,
@@ -197,14 +232,19 @@ function setupVAD(
           // Only process if audio is long enough (prevents tiny clicks from triggering AI)
           const durationSeconds = totalLength / audioCtx.sampleRate;
           if (durationSeconds > 0.5) {
-            // Whisper STRICTLY requires 16000Hz. If we don't downsample, it outputs {text: ""}
+            // Whisper STRICTLY requires 16000Hz.
             const downsampled = resampleAudio(merged, audioCtx.sampleRate, 16000);
+            
+            // Create a playable WAV file for debugging
+            const wavBlob = float32ToWav(downsampled, 16000);
+            const audioUrl = URL.createObjectURL(wavBlob);
             
             addLog(`Captured ${sourceName} (${durationSeconds.toFixed(1)}s, resampled to 16kHz)`);
             workerRef.current?.postMessage({
               type: "transcribe",
               audio: downsampled,
-              source: sourceName
+              source: sourceName,
+              audioUrl
             });
           }
           
