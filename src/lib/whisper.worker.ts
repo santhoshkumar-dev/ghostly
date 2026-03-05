@@ -9,7 +9,7 @@ let transcriber: any = null;
 const log = (msg: string) => postMessage({ type: 'log', message: `[Worker] ${msg}` });
 
 self.addEventListener('message', async (e) => {
-  const { type, audio, source } = e.data;
+  const { type, audio, source, audioUrl } = e.data;
 
   if (type === 'load') {
     if (!transcriber) {
@@ -48,7 +48,8 @@ self.addEventListener('message', async (e) => {
         postMessage({
           type: 'result',
           source,
-          text
+          text,
+          audioUrl // pass the debugging audio url back
         });
       }
     } catch (err) {
