@@ -1,25 +1,63 @@
 # 👻 Ghostly — Stealth AI Coding Assistant
 
-A desktop app that runs as an invisible overlay, captures screen regions, and streams AI-powered solutions — completely invisible to screen share, Zoom, OBS, and Teams.
+![Ghostly App Demo](assets/read-me.png)
 
-## ✨ Features
+A powerful desktop application that runs as an invisible overlay, capturing screen regions, transcribing audio, and streaming AI-powered solutions. Built specifically for ultimate stealth — it remains completely invisible to screen share platforms like Zoom, Google Meet, OBS, and MS Teams.
 
-- **Invisible Overlay** — Window excluded from all screen capture via `setContentProtection(true)`
-- **Click-Through Transparency** — Doesn't interfere with your workflow
-- **Region Selector** — Crosshair drag UI to capture specific areas
-- **AI Vision Streaming** — Screenshot → AI → streamed solution in real-time
-- **Multi-Provider** — Gemini (default), OpenAI, Anthropic, Groq
-- **Dark Glassmorphism UI** — Beautiful, minimal, and professional
-- **Encrypted Storage** — API keys and history stored securely via electron-store
-- **Global Hotkeys** — Works even when the window is hidden
+---
+
+## ✨ Key Features
+
+### 🕵️‍♂️ Ultimate Stealth & Invisible Overlay
+
+- **Screen-Share Proof**: Utilizes hardware-level window exclusion (`setContentProtection(true)`) so the app never shows up on screen shares or recordings.
+- **Click-Through Transparency**: The UI lets your mouse clicks pass through to underlying applications, ensuring zero interruption to your regular workflow or IDE usage.
+- **Taskbar Hidden**: No icons in the taskbar; operates purely as a background utility with a discrete system tray icon.
+
+### 🎙️ Live Interview Transcription
+
+- **Real-time Audio Processing**: Transcribe live interviews, meetings, and technical discussions as they happen.
+- **Automated Context**: Feeds the spoken conversation context directly to the AI to understand exactly what is being asked and generate highly relevant coding solutions dynamically.
+
+### 📸 Intelligent Screen Capture & Vision
+
+- **Region Selector UI**: Drag a simple crosshair over any coding problem, browser window, or terminal to capture the specific context.
+- **Real-time Solution Streaming**: Screenshots are passed to your chosen LLM Vision model, streaming back high-quality, formatted code solutions in real-time.
+
+### 💬 Covert Typing & Custom Chats
+
+- **Ask Follow-ups**: Seamlessly type custom questions and prompts directly in the invisible interface while keeping it hidden from viewers.
+- **Context-Aware Memory**: The AI remembers the ongoing session to provide continuous, context-aware assistance.
+
+### 🧠 Multi-Provider AI Support
+
+- Connect your own API keys for ultimate privacy and control.
+- Supported providers include: **Google Gemini** (default, excellent vision features), **OpenAI**, **Anthropic**, and **Groq** (for blazing-fast text responses).
+- **Encrypted Storage**: API keys, user settings, and session history are securely stored and encrypted locally via `electron-store`.
+
+### 🎨 Premium Interface Focus
+
+- **Dark Glassmorphism UX**: Sleek, modern, and non-distracting visual design.
+- **Global Hotkeys**: Trigger captures, clear the screen, or hide the app instantly from anywhere.
+
+## 📸 Screenshots
+
+![What Interviewer Sees](assets/screenshots/screenshot1-whatinterviewersees.png)
+![Screenshot 1](assets/screenshots/screenshot1.png)
+![Screenshot 2](assets/screenshots/screenshot2.png)
+![Screenshot 3](assets/screenshots/screenshot3.png)
+![Screenshot 4](assets/screenshots/screenshot4.png)
+![Screenshot 5](assets/screenshots/screenshot5.png)
 
 ## ⌨️ Keyboard Shortcuts
 
-| Shortcut           | Action                 |
-| ------------------ | ---------------------- |
-| `Ctrl+Shift+Space` | Capture region & solve |
-| `Ctrl+Shift+H`     | Toggle show/hide       |
-| `Ctrl+Shift+R`     | Clear current solution |
+| Shortcut            | Action                             |
+| ------------------- | ---------------------------------- |
+| `Ctrl/Cmd + H`      | Capture screenshot & load          |
+| `Ctrl/Cmd + Enter`  | Solve / Ask AI                     |
+| `Ctrl/Cmd + B`      | Toggle show / hide app             |
+| `Ctrl/Cmd + G`      | Start over / clear current session |
+| `Ctrl/Cmd + Arrows` | Move Ghostly window position       |
 
 ## 🚀 Quick Start
 
