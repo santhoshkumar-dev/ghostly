@@ -1,6 +1,10 @@
 import { contextBridge, ipcRenderer } from "electron";
 
 contextBridge.exposeInMainWorld("ghostly", {
+  // System Audio source fetcher
+  getDesktopSources: (): Promise<{id: string, name: string}[]> =>
+    ipcRenderer.invoke("ghostly:get-desktop-sources"),
+
   // Mouse click-through control
   enableMouse: (): void => ipcRenderer.send("ghostly:enable-mouse"),
   disableMouse: (): void => ipcRenderer.send("ghostly:disable-mouse"),
