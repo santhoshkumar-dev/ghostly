@@ -59,6 +59,7 @@ export const TopBar: React.FC<TopBarProps> = ({
       <div className="flex flex-col items-center gap-2 pointer-events-none">
         <div
           className="
+            relative z-50
             flex items-center gap-3
             bg-[rgba(30,30,30,0.92)]
             backdrop-blur-2xl
