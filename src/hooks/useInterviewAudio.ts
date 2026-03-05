@@ -61,18 +61,28 @@ export function useInterviewAudio() {
       const screenSource = sources.find((s) => s.name === "Entire Screen" || s.name.includes("Screen")) || sources[0];
       
       let sysStream: MediaStream | null = null;
-      try {
-        sysStream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            mandatory: { chromeMediaSource: "desktop", chromeMediaSourceId: screenSource.id },
-          } as any,
-          video: false,
-        });
-        const sysSource = audioCtx.createMediaStreamSource(sysStream);
-        setupVAD(audioCtx, sysSource, "system", workerRef, addLog);
-        addLog("System audio capture started.");
-      } catch (err) {
-        addLog(`Warning: System audio capture failed (${err}). Continuing with mic only.`);
+      if (screenSource) {
+        try {
+          // CRITICAL: Electron requires requesting video when capturing desktop audio.
+          // If you set video: false with chromeMediaSource: "desktop", the renderer crashes with Reason 263.
+          sysStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              mandatory: { chromeMediaSource: "desktop", chromeMediaSourceId: screenSource.id },
+            } as any,
+            video: {
+              mandatory: { chromeMediaSource: "desktop", chromeMediaSourceId: screenSource.id },
+            } as any,
+          });
+          
+          // Immediately stop the video tracks to save resources
+          sysStream.getVideoTracks().forEach(track => track.stop());
+
+          const sysSource = audioCtx.createMediaStreamSource(sysStream);
+          setupVAD(audioCtx, sysSource, "system", workerRef, addLog);
+          addLog("System audio capture started.");
+        } catch (err) {
+          addLog(`Warning: System audio capture failed (${err}). Continuing with mic only.`);
+        }
       }
 
       // 2. Get Mic Audio with HARDWARE NOISE CANCELLATION
