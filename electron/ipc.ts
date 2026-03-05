@@ -23,7 +23,7 @@ const store = new Store({
 });
 
 export function registerIpcHandlers(): void {
-  // Full-screen capture
+  // ── Full-screen capture
   ipcMain.handle("ghostly:capture-fullscreen", async () => {
     try {
       return await captureFullScreen();
@@ -33,7 +33,7 @@ export function registerIpcHandlers(): void {
     }
   });
 
-  // Legacy capture handlers (kept for compatibility)
+  // ── Legacy capture handlers (kept for compatibility)
   ipcMain.handle("capture-screen", async () => {
     try {
       return await captureFullScreen();
@@ -55,7 +55,7 @@ export function registerIpcHandlers(): void {
     },
   );
 
-  // Settings
+  // ── Settings
   ipcMain.handle("get-settings", () => {
     return store.get("settings");
   });
@@ -64,12 +64,26 @@ export function registerIpcHandlers(): void {
     store.set("settings", settings);
   });
 
-  // History
+  // ── History
   ipcMain.handle("get-history", () => {
     return store.get("history") || [];
   });
 
   ipcMain.handle("save-history", (_event, history: any[]) => {
     store.set("history", history);
+  });
+
+  // ── Desktop audio source ID
+  // Used by the renderer to tap system loopback audio via getUserMedia
+  // (future enhancement — currently mic-only transcription is active)
+  ipcMain.handle("ghostly:get-desktop-source-id", async () => {
+    try {
+      const { desktopCapturer } = await import("electron");
+      const sources = await desktopCapturer.getSources({ types: ["screen"] });
+      return sources[0]?.id ?? null;
+    } catch (error) {
+      console.error("Failed to get desktop source id:", error);
+      return null;
+    }
   });
 }

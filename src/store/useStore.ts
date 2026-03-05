@@ -28,21 +28,27 @@ export interface Settings {
 }
 
 interface GhostlyStore {
-  // Session
+  // ── Session
   currentSolution: string;
   isStreaming: boolean;
-  screenshots: string[]; // accumulated screenshots (multiple Ctrl+H)
-  currentScreenshot: string | null; // latest screenshot (for backward compat)
+  screenshots: string[];
+  currentScreenshot: string | null;
   isRegionSelecting: boolean;
   error: string | null;
 
-  // History
+  // ── Transcription
+  isInterviewActive: boolean;
+  isTranscribing: boolean;
+  transcript: string;
+  whisperStatus: string;
+
+  // ── History
   history: Solution[];
 
-  // Settings
+  // ── Settings
   settings: Settings;
 
-  // Mouse state
+  // ── Mouse state
   mouseEnabled: boolean;
 
   // Actions — session
@@ -55,8 +61,17 @@ interface GhostlyStore {
   removeScreenshot: (index: number) => void;
   setIsRegionSelecting: (v: boolean) => void;
   setError: (err: string | null) => void;
+  /** Clears solution, screenshots AND transcript */
   clearSolution: () => void;
   setMouseEnabled: (v: boolean) => void;
+
+  // Actions — transcription
+  setIsInterviewActive: (v: boolean) => void;
+  setIsTranscribing: (v: boolean) => void;
+  setTranscript: (text: string) => void;
+  appendToTranscript: (chunk: string) => void;
+  clearTranscript: () => void;
+  setWhisperStatus: (status: string) => void;
 
   // Actions — history
   addToHistory: (s: Solution) => void;
@@ -71,7 +86,7 @@ interface GhostlyStore {
 }
 
 export const useStore = create<GhostlyStore>((set) => ({
-  // State
+  // ── State
   currentSolution: "",
   isStreaming: false,
   screenshots: [],
@@ -89,7 +104,13 @@ export const useStore = create<GhostlyStore>((set) => ({
     customInstructions: "",
   },
 
-  // Session actions
+  // ── Transcription state
+  isInterviewActive: false,
+  isTranscribing: false,
+  transcript: "",
+  whisperStatus: "idle",
+
+  // ── Session actions
   setCurrentSolution: (text) => set({ currentSolution: text }),
   appendToSolution: (chunk) =>
     set((s) => ({ currentSolution: s.currentSolution + chunk })),
@@ -111,23 +132,34 @@ export const useStore = create<GhostlyStore>((set) => ({
     }),
   setIsRegionSelecting: (v) => set({ isRegionSelecting: v }),
   setError: (err) => set({ error: err }),
+  // Ctrl+G clears solution, screenshots AND transcript simultaneously
   clearSolution: () =>
     set({
       currentSolution: "",
       screenshots: [],
       currentScreenshot: null,
       error: null,
+      transcript: "",
     }),
   setMouseEnabled: (v) => set({ mouseEnabled: v }),
 
-  // History actions
+  // ── Transcription actions
+  setIsInterviewActive: (v) => set({ isInterviewActive: v }),
+  setIsTranscribing: (v) => set({ isTranscribing: v }),
+  setTranscript: (text) => set({ transcript: text }),
+  appendToTranscript: (chunk) =>
+    set((s) => ({ transcript: s.transcript + chunk })),
+  clearTranscript: () => set({ transcript: "" }),
+  setWhisperStatus: (status) => set({ whisperStatus: status }),
+
+  // ── History actions
   addToHistory: (s) => set((state) => ({ history: [s, ...state.history] })),
   removeFromHistory: (id) =>
     set((state) => ({ history: state.history.filter((s) => s.id !== id) })),
   clearHistory: () => set({ history: [] }),
   setHistory: (history) => set({ history }),
 
-  // Settings actions
+  // ── Settings actions
   updateSettings: (partial) =>
     set((s) => ({ settings: { ...s.settings, ...partial } })),
   setApiKey: (provider, key) =>

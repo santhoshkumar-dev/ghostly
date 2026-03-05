@@ -1,29 +1,33 @@
 import { contextBridge, ipcRenderer } from "electron";
 
 contextBridge.exposeInMainWorld("ghostly", {
-  // Mouse click-through control
+  // ── Mouse click-through control
   enableMouse: (): void => ipcRenderer.send("ghostly:enable-mouse"),
   disableMouse: (): void => ipcRenderer.send("ghostly:disable-mouse"),
 
-  // Window control
+  // ── Window control
   hide: (): void => ipcRenderer.send("ghostly:hide"),
   show: (): void => ipcRenderer.send("ghostly:show"),
 
-  // Capture
+  // ── Screen capture
   captureFullscreen: (): Promise<string> =>
     ipcRenderer.invoke("ghostly:capture-fullscreen"),
 
-  // Settings persistence
+  // ── Desktop audio source ID (for future system-audio transcription)
+  getDesktopSourceId: (): Promise<string | null> =>
+    ipcRenderer.invoke("ghostly:get-desktop-source-id"),
+
+  // ── Settings persistence
   getSettings: (): Promise<any> => ipcRenderer.invoke("get-settings"),
   saveSettings: (settings: any): Promise<void> =>
     ipcRenderer.invoke("save-settings", settings),
 
-  // History persistence
+  // ── History persistence
   getHistory: (): Promise<any[]> => ipcRenderer.invoke("get-history"),
   saveHistory: (history: any[]): Promise<void> =>
     ipcRenderer.invoke("save-history", history),
 
-  // Events from main process (hotkeys)
+  // ── Events from main process (hotkeys)
   onScreenshot: (cb: (b64: string) => void): (() => void) => {
     const listener = (_: any, b64: string): void => cb(b64);
     ipcRenderer.on("ghostly:screenshot", listener);
