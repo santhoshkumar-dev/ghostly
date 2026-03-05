@@ -7,7 +7,7 @@ interface InterviewModalProps {
 }
 
 export const InterviewModal: React.FC<InterviewModalProps> = ({ onClose, onSubmit }) => {
-  const { messages, isRecording, logs, isModelReady, startInterview, stopInterview } = useInterviewAudio();
+  const { messages, isRecording, logs, debugAudios, isModelReady, startInterview, stopInterview } = useInterviewAudio();
   const [showLogs, setShowLogs] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -95,16 +95,6 @@ export const InterviewModal: React.FC<InterviewModalProps> = ({ onClose, onSubmi
                     <div className="text-sm leading-relaxed">
                       {msg.text}
                     </div>
-                    
-                    {/* Debug Audio Player */}
-                    {msg.audioUrl && (
-                      <audio 
-                        controls 
-                        src={msg.audioUrl} 
-                        className="h-7 w-full max-w-[200px] mt-3 opacity-60 hover:opacity-100 transition-opacity" 
-                        style={{ filter: "invert(100%)" }} // Simple hack to make native audio player look slightly better on dark backgrounds
-                      />
-                    )}
                   </div>
                 </div>
               ))}
@@ -148,15 +138,34 @@ export const InterviewModal: React.FC<InterviewModalProps> = ({ onClose, onSubmi
           {showLogs && (
             <div className="w-[40%] bg-black/40 flex flex-col">
               <div className="px-4 py-2 border-b border-white/[0.08] text-xs text-white/50 uppercase tracking-wider font-semibold">
-                Dev Logs
+                Dev Logs & Audio
               </div>
-              <div className="flex-1 overflow-y-auto p-4 space-y-1 font-mono text-[10px] text-white/60">
-                {logs.map((log, i) => (
-                  <div key={i} className="break-words">
-                    {log}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                
+                {/* Audio Debugger */}
+                {debugAudios.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-[10px] text-white/40 uppercase tracking-wider font-semibold mb-2">Raw Audio Sent to AI:</div>
+                    {debugAudios.map((da, i) => (
+                      <div key={i} className="bg-white/[0.05] p-2 rounded-lg border border-white/[0.05]">
+                        <div className="text-[10px] text-white/70 mb-1">{da.name}</div>
+                        <audio controls src={da.url} className="h-6 w-full" style={{ filter: "invert(100%)" }} />
+                      </div>
+                    ))}
                   </div>
-                ))}
-                {logs.length === 0 && <div className="italic opacity-50">Waiting for logs...</div>}
+                )}
+
+                {/* Text Logs */}
+                <div className="space-y-1 font-mono text-[10px] text-white/60">
+                  <div className="text-[10px] text-white/40 uppercase tracking-wider font-semibold mb-2 mt-4">System Logs:</div>
+                  {logs.map((log, i) => (
+                    <div key={i} className={`break-words ${log.includes('WARNING') ? 'text-yellow-400' : ''}`}>
+                      {log}
+                    </div>
+                  ))}
+                  {logs.length === 0 && <div className="italic opacity-50">Waiting for logs...</div>}
+                </div>
+
               </div>
             </div>
           )}
