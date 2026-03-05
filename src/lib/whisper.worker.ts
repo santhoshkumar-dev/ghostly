@@ -32,24 +32,22 @@ self.addEventListener('message', async (e) => {
     
     const start = performance.now();
     try {
-      log(`Received audio array length: ${audio.length} for ${source}`);
-
-      // CRITICAL FIX: Ensure the array is strictly a flat Float32Array
-      // Sometimes postMessage strips the Float32Array prototype, turning it into a normal object/array
+      // 1. Ensure audio is a genuine Float32Array. 
+      // When crossing the Web Worker boundary via postMessage, typed arrays can sometimes lose their prototype.
       const float32Audio = audio instanceof Float32Array ? audio : new Float32Array(Object.values(audio));
+      
+      log(`Processing audio of length: ${float32Audio.length}`);
 
-      // According to Transformers.js docs, simple invocation is best
-      const result = await transcriber(float32Audio, {
-        chunk_length_s: 30,
-        stride_length_s: 5,
-        language: 'english',
-        task: 'transcribe',
-      });
+      // 2. Simplified pipeline call as per Transformers.js docs
+      const result = await transcriber(float32Audio);
       
       const time = ((performance.now() - start) / 1000).toFixed(2);
       log(`Transcribed ${source} in ${time}s`);
       
-      // Transformers.js Whisper can sometimes return an array of objects depending on the pipeline config
+      // 3. Log raw output to see exact structure
+      log(`Raw Output: ${JSON.stringify(result)}`);
+
+      // 4. Safely extract text whether it returns an object or an array of objects
       let text = "";
       if (Array.isArray(result)) {
         text = result.map(r => r.text).join(" ");
@@ -58,7 +56,6 @@ self.addEventListener('message', async (e) => {
       }
       
       text = text.trim();
-      log(`Raw Output: ${JSON.stringify(result)}`);
 
       if (text.length > 0) {
         postMessage({
@@ -68,7 +65,7 @@ self.addEventListener('message', async (e) => {
           audioUrl
         });
       } else {
-        log(`[WARNING] Text was empty after parsing. Length was ${audio.length}`);
+        log(`[WARNING] Parsed text was empty!`);
       }
     } catch (err) {
       log(`Transcription error: ${err}`);
