@@ -7,18 +7,19 @@ import { v4 as uuidv4 } from "uuid";
 import { TopBar } from "../components/TopBar";
 import { SettingsPanel } from "../components/SettingsPanel";
 import { SolutionCard } from "../components/SolutionCard";
+import { TranscriptBar } from "../components/TranscriptBar";
+import { useTranscription } from "../hooks/useTranscription";
 
 export const Home: React.FC = () => {
   const {
     currentSolution,
     isStreaming,
     screenshots,
-    currentScreenshot,
     error,
     settings,
+    transcript,
     addScreenshot,
     removeScreenshot,
-    clearScreenshots,
     setCurrentSolution,
     appendToSolution,
     setIsStreaming,
@@ -28,16 +29,20 @@ export const Home: React.FC = () => {
   } = useStore();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Keep refs in sync so hotkey callbacks always read the latest values
   const screenshotsRef = useRef<string[]>(screenshots);
+  const transcriptRef  = useRef<string>(transcript);
 
-  // Keep ref in sync
-  useEffect(() => {
-    screenshotsRef.current = screenshots;
-  }, [screenshots]);
+  useEffect(() => { screenshotsRef.current = screenshots; }, [screenshots]);
+  useEffect(() => { transcriptRef.current  = transcript;  }, [transcript]);
 
-  // AI streaming function
+  // ── Whisper transcription hook
+  const { startTranscription, stopTranscription } = useTranscription();
+
+  // ── AI streaming ─────────────────────────────────────────────────────
   const runAIStream = useCallback(
-    async (screenshotList: string[]) => {
+    async (screenshotList: string[], transcriptText?: string) => {
       const apiKey = settings.apiKeys[settings.activeProvider];
       if (!apiKey) {
         setError(
@@ -48,9 +53,10 @@ export const Home: React.FC = () => {
       }
 
       const isGeneral = settings.interviewType === "general";
-      if (!isGeneral && screenshotList.length === 0) {
+      // Allow solve with transcript alone (no screenshot needed)
+      if (!isGeneral && screenshotList.length === 0 && !transcriptText) {
         setError(
-          "No screenshots yet. Press Ctrl+H to take a screenshot first.",
+          "No screenshots or transcript yet. Press Ctrl+H to capture, or start an interview.",
         );
         setIsStreaming(false);
         return;
@@ -60,16 +66,16 @@ export const Home: React.FC = () => {
       setError(null);
       setIsStreaming(true);
 
+      // Pass transcript into the prompt builder
       const prompt =
         settings.interviewType === "general"
           ? settings.customInstructions || "Please answer the general question."
-          : buildPrompt(settings.interviewType, settings.language);
+          : buildPrompt(settings.interviewType, settings.language, transcriptText);
 
       try {
         const provider = getProvider(settings.activeProvider);
         let fullSolution = "";
 
-        // Use the latest screenshot for the AI call
         const latestScreenshot = screenshotList[screenshotList.length - 1];
 
         const stream = provider.streamSolution({
@@ -85,7 +91,7 @@ export const Home: React.FC = () => {
           appendToSolution(chunk);
         }
 
-        // Save to history
+        // Persist to history
         const entry = {
           id: uuidv4(),
           timestamp: Date.now(),
@@ -105,8 +111,7 @@ export const Home: React.FC = () => {
           /* best-effort */
         }
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "AI streaming failed";
+        const message = err instanceof Error ? err.message : "AI streaming failed";
         setError(message);
       } finally {
         setIsStreaming(false);
@@ -122,21 +127,22 @@ export const Home: React.FC = () => {
     ],
   );
 
-  // Listen for hotkey events from main process
+  // ── Hotkey listeners from main process ───────────────────────────────
   useEffect(() => {
-    // Ctrl+H — screenshot captured (multiple accumulate)
+    // Ctrl+H — screenshot captured, accumulate multiple
     const offScreenshot = window.ghostly.onScreenshot((b64: string) => {
       addScreenshot(b64);
     });
 
-    // Ctrl+Enter — solve with all accumulated screenshots
+    // Ctrl+Enter — solve: pass BOTH screenshots AND live transcript
     const offSolve = window.ghostly.onSolve(async () => {
       const shots = screenshotsRef.current;
+      const tx    = transcriptRef.current;
       setCurrentSolution("");
-      await runAIStream(shots);
+      await runAIStream(shots, tx || undefined);
     });
 
-    // Ctrl+G — start over (clear everything)
+    // Ctrl+G — start over: clears solution + screenshots + transcript
     const offStartOver = window.ghostly.onStartOver(() => {
       clearSolution();
     });
@@ -146,7 +152,7 @@ export const Home: React.FC = () => {
       offSolve();
       offStartOver();
     };
-  }, [runAIStream, addScreenshot, clearSolution, setError, setCurrentSolution]);
+  }, [runAIStream, addScreenshot, clearSolution, setCurrentSolution]);
 
   return (
     <div className="min-h-screen w-full bg-transparent text-white font-mono pointer-events-none select-none">
@@ -170,11 +176,18 @@ export const Home: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Content Area (only when settings is closed) */}
+      {/* Main Content */}
       {!settingsOpen && (
         <div className="flex justify-center mt-2">
           <div className="w-[860px] space-y-2">
-            {/* Error */}
+
+            {/* ── Interview Mode / Transcript Bar (always visible) */}
+            <TranscriptBar
+              onStart={startTranscription}
+              onStop={stopTranscription}
+            />
+
+            {/* ── Error */}
             <AnimatePresence>
               {error && (
                 <motion.div
@@ -187,14 +200,12 @@ export const Home: React.FC = () => {
                     border: "1px solid rgba(255, 60, 60, 0.15)",
                   }}
                 >
-                  <p className="text-[11px] text-red-300/80 font-mono">
-                    {error}
-                  </p>
+                  <p className="text-[11px] text-red-300/80 font-mono">{error}</p>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* Screenshots strip (shows all captured screenshots) */}
+            {/* ── Screenshots strip */}
             {screenshots.length > 0 && !currentSolution && !isStreaming && (
               <motion.div
                 initial={{ opacity: 0 }}
@@ -209,8 +220,7 @@ export const Home: React.FC = () => {
               >
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[10px] text-white/40 font-mono">
-                    📸 {screenshots.length} screenshot
-                    {screenshots.length > 1 ? "s" : ""} captured
+                    📸 {screenshots.length} screenshot{screenshots.length > 1 ? "s" : ""} captured
                   </span>
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] text-white/25 font-mono">
@@ -254,7 +264,7 @@ export const Home: React.FC = () => {
               </motion.div>
             )}
 
-            {/* Solution */}
+            {/* ── AI Solution */}
             {(currentSolution || isStreaming) && (
               <div
                 className="pointer-events-auto rounded-2xl overflow-hidden"
@@ -275,6 +285,7 @@ export const Home: React.FC = () => {
                 </div>
               </div>
             )}
+
           </div>
         </div>
       )}
