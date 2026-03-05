@@ -54,7 +54,8 @@ export function useInterviewAudio() {
     addLog("Starting Audio Capture...");
 
     try {
-      const audioCtx = new AudioContext({ sampleRate: 16000 });
+      // Keep native sample rate to prevent distortion, we will downsample manually
+      const audioCtx = new AudioContext(); 
 
       // 1. Get System Audio (Interviewer)
       const sources = await window.ghostly.getDesktopSources();
@@ -63,8 +64,6 @@ export function useInterviewAudio() {
       let sysStream: MediaStream | null = null;
       if (screenSource) {
         try {
-          // CRITICAL: Electron requires requesting video when capturing desktop audio.
-          // If you set video: false with chromeMediaSource: "desktop", the renderer crashes with Reason 263.
           sysStream = await navigator.mediaDevices.getUserMedia({
             audio: {
               mandatory: { chromeMediaSource: "desktop", chromeMediaSourceId: screenSource.id },
@@ -74,7 +73,6 @@ export function useInterviewAudio() {
             } as any,
           });
           
-          // Immediately stop the video tracks to save resources
           sysStream.getVideoTracks().forEach(track => track.stop());
 
           const sysSource = audioCtx.createMediaStreamSource(sysStream);
@@ -85,7 +83,7 @@ export function useInterviewAudio() {
         }
       }
 
-      // 2. Get Mic Audio with HARDWARE NOISE CANCELLATION
+      // 2. Get Mic Audio
       const micStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -96,15 +94,12 @@ export function useInterviewAudio() {
         video: false,
       });
 
-      // 3. Apply WEB AUDIO API NOISE FILTERS to Mic
       const micSource = audioCtx.createMediaStreamSource(micStream);
       
-      // High-pass: cuts rumbling fan/AC noise below 80Hz
       const highpass = audioCtx.createBiquadFilter();
       highpass.type = "highpass";
       highpass.frequency.value = 80;
 
-      // Low-pass: cuts high-pitched hissing above 8000Hz
       const lowpass = audioCtx.createBiquadFilter();
       lowpass.type = "lowpass";
       lowpass.frequency.value = 8000;
@@ -112,11 +107,9 @@ export function useInterviewAudio() {
       micSource.connect(highpass);
       highpass.connect(lowpass);
 
-      // 4. Setup Voice Activity Detection (VAD) processor for Mic
       setupVAD(audioCtx, lowpass, "mic", workerRef, addLog);
       addLog("Mic capture started with noise filters.");
 
-      // Keep streams in a ref so we can stop them later
       (window as any)._interviewStreams = [micStream, sysStream, audioCtx];
 
     } catch (err) {
@@ -130,14 +123,31 @@ export function useInterviewAudio() {
     addLog("Stopped Interview.");
     const streams = (window as any)._interviewStreams;
     if (streams) {
-      if (streams[0]) streams[0].getTracks().forEach((t: any) => t.stop()); // Mic
-      if (streams[1]) streams[1].getTracks().forEach((t: any) => t.stop()); // Sys
-      if (streams[2]) streams[2].close(); // AudioContext
+      if (streams[0]) streams[0].getTracks().forEach((t: any) => t.stop()); 
+      if (streams[1]) streams[1].getTracks().forEach((t: any) => t.stop()); 
+      if (streams[2]) streams[2].close(); 
       (window as any)._interviewStreams = null;
     }
   };
 
   return { messages, isRecording, logs, isModelReady, startInterview, stopInterview };
+}
+
+// Function to resample Float32Array to 16000Hz (Whisper requires 16kHz)
+function resampleAudio(audioBuffer: Float32Array, originalSampleRate: number, targetSampleRate = 16000): Float32Array {
+  if (originalSampleRate === targetSampleRate) {
+    return audioBuffer;
+  }
+  
+  const ratio = originalSampleRate / targetSampleRate;
+  const newLength = Math.round(audioBuffer.length / ratio);
+  const result = new Float32Array(newLength);
+  
+  for (let i = 0; i < newLength; i++) {
+    result[i] = audioBuffer[Math.floor(i * ratio)];
+  }
+  
+  return result;
 }
 
 // Voice Activity Detector (VAD) Helper
@@ -148,20 +158,20 @@ function setupVAD(
   workerRef: React.MutableRefObject<Worker | null>,
   addLog: (msg: string) => void
 ) {
-  // Processor size: 4096 frames = ~250ms chunks at 16kHz
   const processor = audioCtx.createScriptProcessor(4096, 1, 1);
   sourceNode.connect(processor);
   processor.connect(audioCtx.destination);
 
   let audioBuffer: Float32Array[] = [];
   let silenceFrames = 0;
-  const SILENCE_THRESHOLD = 0.01; // Adjust this if fan noise still triggers it
-  const MAX_SILENCE_FRAMES = 4; // ~1 second of silence triggers the transcription
+  
+  // Dynamic thresholding
+  const SILENCE_THRESHOLD = 0.01; 
+  const MAX_SILENCE_FRAMES = 3; 
 
   processor.onaudioprocess = (e) => {
     const input = e.inputBuffer.getChannelData(0);
     
-    // Calculate volume energy of this chunk
     let sum = 0;
     for (let i = 0; i < input.length; i++) {
       sum += input[i] * input[i];
@@ -169,15 +179,13 @@ function setupVAD(
     const rms = Math.sqrt(sum / input.length);
 
     if (rms > SILENCE_THRESHOLD) {
-      // Speaking
       silenceFrames = 0;
       audioBuffer.push(new Float32Array(input));
     } else {
-      // Silence
       if (audioBuffer.length > 0) {
         silenceFrames++;
         if (silenceFrames >= MAX_SILENCE_FRAMES) {
-          // Flatten array and send to worker
+          // Merge buffer
           const totalLength = audioBuffer.reduce((acc, val) => acc + val.length, 0);
           const merged = new Float32Array(totalLength);
           let offset = 0;
@@ -186,14 +194,21 @@ function setupVAD(
             offset += buffer.length;
           }
           
-          addLog(`Captured ${sourceName} speech (${(totalLength/16000).toFixed(1)}s)`);
-          workerRef.current?.postMessage({
-            type: "transcribe",
-            audio: merged,
-            source: sourceName
-          });
+          // Only process if audio is long enough (prevents tiny clicks from triggering AI)
+          const durationSeconds = totalLength / audioCtx.sampleRate;
+          if (durationSeconds > 0.5) {
+            // Whisper STRICTLY requires 16000Hz. If we don't downsample, it outputs {text: ""}
+            const downsampled = resampleAudio(merged, audioCtx.sampleRate, 16000);
+            
+            addLog(`Captured ${sourceName} (${durationSeconds.toFixed(1)}s, resampled to 16kHz)`);
+            workerRef.current?.postMessage({
+              type: "transcribe",
+              audio: downsampled,
+              source: sourceName
+            });
+          }
           
-          audioBuffer = []; // reset
+          audioBuffer = [];
           silenceFrames = 0;
         }
       }
