@@ -32,8 +32,14 @@ self.addEventListener('message', async (e) => {
     
     const start = performance.now();
     try {
-      // audio is a Float32Array from the AudioContext
-      const result = await transcriber(audio, {
+      log(`Received audio array length: ${audio.length} for ${source}`);
+
+      // CRITICAL FIX: Ensure the array is strictly a flat Float32Array
+      // Sometimes postMessage strips the Float32Array prototype, turning it into a normal object/array
+      const float32Audio = audio instanceof Float32Array ? audio : new Float32Array(Object.values(audio));
+
+      // According to Transformers.js docs, simple invocation is best
+      const result = await transcriber(float32Audio, {
         chunk_length_s: 30,
         stride_length_s: 5,
         language: 'english',
@@ -43,14 +49,26 @@ self.addEventListener('message', async (e) => {
       const time = ((performance.now() - start) / 1000).toFixed(2);
       log(`Transcribed ${source} in ${time}s`);
       
-      const text = result.text.trim();
+      // Transformers.js Whisper can sometimes return an array of objects depending on the pipeline config
+      let text = "";
+      if (Array.isArray(result)) {
+        text = result.map(r => r.text).join(" ");
+      } else if (result && result.text) {
+        text = result.text;
+      }
+      
+      text = text.trim();
+      log(`Raw Output: ${JSON.stringify(result)}`);
+
       if (text.length > 0) {
         postMessage({
           type: 'result',
           source,
           text,
-          audioUrl // pass the debugging audio url back
+          audioUrl
         });
+      } else {
+        log(`[WARNING] Text was empty after parsing. Length was ${audio.length}`);
       }
     } catch (err) {
       log(`Transcription error: ${err}`);
