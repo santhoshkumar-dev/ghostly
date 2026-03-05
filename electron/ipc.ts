@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { ipcMain, desktopCapturer } from "electron";
 import { captureFullScreen, captureRegion } from "./capture";
 import Store from "electron-store";
 
@@ -23,6 +23,20 @@ const store = new Store({
 });
 
 export function registerIpcHandlers(): void {
+  // Desktop sources for audio capture
+  ipcMain.handle("ghostly:get-desktop-sources", async () => {
+    try {
+      const sources = await desktopCapturer.getSources({ 
+        types: ["screen", "window"],
+        fetchWindowIcons: false 
+      });
+      return sources.map((s) => ({ id: s.id, name: s.name }));
+    } catch (error) {
+      console.error("Failed to get desktop sources:", error);
+      throw error;
+    }
+  });
+
   // Full-screen capture
   ipcMain.handle("ghostly:capture-fullscreen", async () => {
     try {

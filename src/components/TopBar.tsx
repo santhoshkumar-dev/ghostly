@@ -5,11 +5,13 @@ import { INTERVIEW_TYPES } from "./SettingsPanel";
 interface TopBarProps {
   onOpenSettings: () => void;
   settingsOpen: boolean;
+  onStartInterview: () => void;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
   onOpenSettings,
   settingsOpen,
+  onStartInterview,
 }) => {
   const { mouseEnabled, settings, updateSettings } = useStore();
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -74,7 +76,10 @@ export const TopBar: React.FC<TopBarProps> = ({
         >
           {/* Ghost icon + Start Interview pill */}
           <div
-            className="flex items-center gap-2 bg-[#ff9f43] rounded-full px-3 py-1 text-[11px] text-black font-semibold cursor-default"
+            onClick={onStartInterview}
+            onMouseEnter={handleGearEnter}
+            onMouseLeave={handleGearLeave}
+            className="flex items-center gap-2 bg-[#ff9f43] hover:bg-[#ffb067] transition-colors rounded-full px-3 py-1 text-[11px] text-black font-semibold cursor-pointer"
             style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
           >
             <span>👻</span>
