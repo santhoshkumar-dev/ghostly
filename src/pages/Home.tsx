@@ -31,11 +31,21 @@ export const Home: React.FC = () => {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [interviewOpen, setInterviewOpen] = useState(false);
   const screenshotsRef = useRef<string[]>(screenshots);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Keep ref in sync
   useEffect(() => {
     screenshotsRef.current = screenshots;
   }, [screenshots]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   // AI streaming function
   const runAIStream = useCallback(
@@ -57,6 +67,14 @@ export const Home: React.FC = () => {
         setIsStreaming(false);
         return;
       }
+
+      // Abort any ongoing stream
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+      const signal = abortController.signal;
 
       setCurrentSolution("");
       setError(null);
@@ -87,8 +105,15 @@ export const Home: React.FC = () => {
         });
 
         for await (const chunk of stream) {
+          if (signal.aborted) {
+            break;
+          }
           fullSolution += chunk;
           appendToSolution(chunk);
+        }
+
+        if (signal.aborted) {
+          return; // Skip history save if we aborted
         }
 
         // Save to history
@@ -111,11 +136,14 @@ export const Home: React.FC = () => {
           /* best-effort */
         }
       } catch (err) {
+        if (signal.aborted) return;
         const message =
           err instanceof Error ? err.message : "AI streaming failed";
         setError(message);
       } finally {
-        setIsStreaming(false);
+        if (!signal.aborted) {
+          setIsStreaming(false);
+        }
       }
     },
     [
@@ -150,6 +178,10 @@ export const Home: React.FC = () => {
 
     // Ctrl+G — start over (clear everything)
     const offStartOver = window.ghostly.onStartOver(() => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      setIsStreaming(false);
       clearSolution();
     });
 
@@ -158,7 +190,7 @@ export const Home: React.FC = () => {
       offSolve();
       offStartOver();
     };
-  }, [runAIStream, addScreenshot, clearSolution, setError, setCurrentSolution]);
+  }, [runAIStream, addScreenshot, clearSolution, setError, setCurrentSolution, setIsStreaming]);
 
   return (
     <div className="min-h-screen w-full bg-transparent text-white font-mono pointer-events-none select-none">
