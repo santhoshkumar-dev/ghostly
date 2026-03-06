@@ -115,8 +115,11 @@ export const Home: React.FC = () => {
         // Use the latest screenshot for the AI call (if it exists)
         const latestScreenshot = screenshotList.length > 0 ? screenshotList[screenshotList.length - 1] : undefined;
 
-        // Prepare context history (map sessionMessages to what the provider expects)
-        const historyContext = sessionMessages.map((msg) => ({
+        // PERF: Prevent context window token explosion. 
+        // 1. Keep only the last 6 messages (3 interactions).
+        // 2. We only send the text. We do NOT re-send historical Base64 images to save tokens and latency.
+        const recentMessages = sessionMessages.slice(-6);
+        const historyContext = recentMessages.map((msg) => ({
           role: msg.role,
           content: msg.content,
         }));
