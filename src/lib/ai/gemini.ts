@@ -17,6 +17,7 @@ export class GeminiProvider implements AIProvider {
       base64Image,
       mimeType = "image/png",
       prompt,
+      messages = [],
       model,
       apiKey,
       maxTokens = 4096,
@@ -29,24 +30,35 @@ export class GeminiProvider implements AIProvider {
       ? base64Image.split(",")[1]
       : base64Image;
 
-    const parts = imageData
-      ? [
-          {
-            inline_data: {
-              mime_type: mimeType,
-              data: imageData,
-            },
-          },
-          { text: prompt },
-        ]
-      : [{ text: prompt }];
+    const contents: any[] = [];
+
+    // Map previous messages
+    for (const msg of messages) {
+      contents.push({
+        role: msg.role === "assistant" ? "model" : "user",
+        parts: [{ text: msg.content }]
+      });
+    }
+
+    // Append new prompt + image
+    const parts: any[] = [];
+    if (imageData) {
+      parts.push({
+        inline_data: {
+          mime_type: mimeType,
+          data: imageData,
+        },
+      });
+    }
+    parts.push({ text: prompt });
+
+    contents.push({
+      role: "user",
+      parts,
+    });
 
     const body = {
-      contents: [
-        {
-          parts,
-        },
-      ],
+      contents,
       generationConfig: {
         maxOutputTokens: maxTokens,
         temperature: 0.3,
