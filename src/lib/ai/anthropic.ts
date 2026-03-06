@@ -16,6 +16,7 @@ export class AnthropicProvider implements AIProvider {
       base64Image,
       mimeType = "image/png",
       prompt,
+      messages = [],
       model,
       apiKey,
       maxTokens = 4096,
@@ -25,9 +26,14 @@ export class AnthropicProvider implements AIProvider {
       ? base64Image.split(",")[1]
       : base64Image;
 
-    const content: any[] = [];
+    const apiMessages = messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    const currentContent: any[] = [];
     if (imageData) {
-      content.push({
+      currentContent.push({
         type: "image",
         source: {
           type: "base64",
@@ -36,7 +42,12 @@ export class AnthropicProvider implements AIProvider {
         },
       });
     }
-    content.push({ type: "text", text: prompt });
+    currentContent.push({ type: "text", text: prompt });
+
+    apiMessages.push({
+      role: "user",
+      content: currentContent as any,
+    });
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -50,12 +61,7 @@ export class AnthropicProvider implements AIProvider {
         model,
         max_tokens: maxTokens,
         stream: true,
-        messages: [
-          {
-            role: "user",
-            content,
-          },
-        ],
+        messages: apiMessages,
       }),
     });
 
