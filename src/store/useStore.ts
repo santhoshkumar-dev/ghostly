@@ -4,12 +4,19 @@ import type { ProviderName } from "../lib/ai";
 export interface Solution {
   id: string;
   timestamp: number;
-  screenshotBase64: string;
+  screenshotBase64?: string;
   solution: string;
   provider: ProviderName;
   model: string;
   interviewType: string;
   language: string;
+}
+
+export interface SessionMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  screenshotBase64?: string;
 }
 
 export interface Settings {
@@ -37,6 +44,7 @@ interface GhostlyStore {
   currentScreenshot: string | null; // latest screenshot (for backward compat)
   isRegionSelecting: boolean;
   error: string | null;
+  sessionMessages: SessionMessage[];
 
   // History
   history: Solution[];
@@ -59,6 +67,7 @@ interface GhostlyStore {
   setError: (err: string | null) => void;
   clearSolution: () => void;
   setMouseEnabled: (v: boolean) => void;
+  addSessionMessage: (msg: SessionMessage) => void;
 
   // Actions — history
   addToHistory: (s: Solution) => void;
@@ -80,6 +89,7 @@ export const useStore = create<GhostlyStore>((set) => ({
   currentScreenshot: null,
   isRegionSelecting: false,
   error: null,
+  sessionMessages: [],
   history: [],
   mouseEnabled: false,
   settings: {
@@ -121,8 +131,11 @@ export const useStore = create<GhostlyStore>((set) => ({
       screenshots: [],
       currentScreenshot: null,
       error: null,
+      sessionMessages: [],
     }),
   setMouseEnabled: (v) => set({ mouseEnabled: v }),
+  addSessionMessage: (msg) => 
+    set((state) => ({ sessionMessages: [...state.sessionMessages, msg] })),
 
   // History actions
   addToHistory: (s) => set((state) => ({ history: [s, ...state.history] })),
