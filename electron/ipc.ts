@@ -1,5 +1,5 @@
 import { ipcMain, desktopCapturer } from "electron";
-import { captureFullScreen, captureRegion } from "./capture";
+import { captureFullScreen } from "./capture";
 import Store from "electron-store";
 
 const store = new Store({
@@ -56,18 +56,6 @@ export function registerIpcHandlers(): void {
       throw error;
     }
   });
-
-  ipcMain.handle(
-    "capture-region",
-    async (_event, x: number, y: number, width: number, height: number) => {
-      try {
-        return await captureRegion(x, y, width, height);
-      } catch (error) {
-        console.error("Failed to capture region:", error);
-        throw error;
-      }
-    },
-  );
 
   // Settings
   ipcMain.handle("get-settings", () => {
