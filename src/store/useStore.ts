@@ -42,7 +42,6 @@ interface GhostlyStore {
   isStreaming: boolean;
   screenshots: string[]; // accumulated screenshots (multiple Ctrl+H)
   currentScreenshot: string | null; // latest screenshot (for backward compat)
-  isRegionSelecting: boolean;
   error: string | null;
   sessionMessages: SessionMessage[];
 
@@ -63,7 +62,6 @@ interface GhostlyStore {
   addScreenshot: (b64: string) => void;
   clearScreenshots: () => void;
   removeScreenshot: (index: number) => void;
-  setIsRegionSelecting: (v: boolean) => void;
   setError: (err: string | null) => void;
   clearSolution: () => void;
   setMouseEnabled: (v: boolean) => void;
@@ -87,7 +85,6 @@ export const useStore = create<GhostlyStore>((set) => ({
   isStreaming: false,
   screenshots: [],
   currentScreenshot: null,
-  isRegionSelecting: false,
   error: null,
   sessionMessages: [],
   history: [],
@@ -123,7 +120,6 @@ export const useStore = create<GhostlyStore>((set) => ({
         currentScreenshot: next.length > 0 ? next[next.length - 1] : null,
       };
     }),
-  setIsRegionSelecting: (v) => set({ isRegionSelecting: v }),
   setError: (err) => set({ error: err }),
   clearSolution: () =>
     set({
