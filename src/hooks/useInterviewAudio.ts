@@ -9,6 +9,57 @@ export interface ChatMessage {
   audioUrl?: string; // For debugging playback
 }
 
+// Inline AudioWorklet to bypass Vite/Electron worker bundling issues
+const vadWorkletCode = `
+class VADProcessor extends AudioWorkletProcessor {
+  constructor() {
+    super();
+    this.audioBuffer = [];
+    this.silenceFrames = 0;
+    this.SILENCE_THRESHOLD = 0.005;
+    this.MAX_SILENCE_FRAMES = 5; // ~1.25s at typical buffer sizes
+  }
+
+  process(inputs, outputs, parameters) {
+    const input = inputs[0];
+    if (!input || !input[0]) return true;
+    
+    const channelData = input[0];
+    let sum = 0;
+    for (let i = 0; i < channelData.length; i++) {
+      sum += channelData[i] * channelData[i];
+    }
+    const rms = Math.sqrt(sum / channelData.length);
+
+    if (rms > this.SILENCE_THRESHOLD) {
+      this.silenceFrames = 0;
+      // Copy data to avoid mutation
+      this.audioBuffer.push(new Float32Array(channelData));
+    } else {
+      if (this.audioBuffer.length > 0) {
+        this.silenceFrames++;
+        if (this.silenceFrames >= this.MAX_SILENCE_FRAMES) {
+          const totalLength = this.audioBuffer.reduce((acc, val) => acc + val.length, 0);
+          const merged = new Float32Array(totalLength);
+          let offset = 0;
+          for (const buffer of this.audioBuffer) {
+            merged.set(buffer, offset);
+            offset += buffer.length;
+          }
+          
+          this.port.postMessage({ type: 'speech', buffer: merged }, [merged.buffer]);
+          
+          this.audioBuffer = [];
+          this.silenceFrames = 0;
+        }
+      }
+    }
+    return true; // Keep processor alive
+  }
+}
+registerProcessor('vad-processor', VADProcessor);
+`;
+
 export function useInterviewAudio() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isRecording, setIsRecording] = useState(false);
@@ -95,6 +146,12 @@ export function useInterviewAudio() {
 
     try {
       const audioCtx = new window.AudioContext();
+      
+      // Load Worklet
+      const blob = new Blob([vadWorkletCode], { type: 'application/javascript' });
+      const workletUrl = URL.createObjectURL(blob);
+      await audioCtx.audioWorklet.addModule(workletUrl);
+      URL.revokeObjectURL(workletUrl);
 
       // 1. System Audio (Interviewer)
       const sources = await window.ghostly.getDesktopSources();
@@ -124,8 +181,7 @@ export function useInterviewAudio() {
           sysStream.getVideoTracks().forEach((track) => track.stop());
 
           const sysSource = audioCtx.createMediaStreamSource(sysStream);
-          // Don't apply Biquad filters yet to avoid potential silent node chains
-          setupVAD(
+          setupVADWorklet(
             audioCtx,
             sysSource,
             "system",
@@ -159,9 +215,7 @@ export function useInterviewAudio() {
 
       const micSource = audioCtx.createMediaStreamSource(micStream);
 
-      // NOTE: Temporarily removed BiquadFilters because they can sometimes
-      // output absolute silence (0.0 arrays) if initialized incorrectly in Chromium
-      setupVAD(audioCtx, micSource, "mic", workerRef, addLog, addDebugAudio);
+      setupVADWorklet(audioCtx, micSource, "mic", workerRef, addLog, addDebugAudio);
       addLog("Mic capture started.");
 
       (window as any)._interviewStreams = [micStream, sysStream, audioCtx];
@@ -245,8 +299,8 @@ function float32ToWav(samples: Float32Array, sampleRate: number): Blob {
   return new Blob([view], { type: "audio/wav" });
 }
 
-// VAD
-function setupVAD(
+// AudioWorklet VAD Implementation
+function setupVADWorklet(
   audioCtx: AudioContext,
   sourceNode: AudioNode,
   sourceName: "mic" | "system",
@@ -254,75 +308,37 @@ function setupVAD(
   addLog: (msg: string) => void,
   addDebugAudio: (name: string, url: string) => void,
 ) {
-  const processor = audioCtx.createScriptProcessor(4096, 1, 1);
+  const workletNode = new AudioWorkletNode(audioCtx, 'vad-processor');
+  
+  sourceNode.connect(workletNode);
+  // Connect to destination to ensure clock ticks (required in some browsers)
+  workletNode.connect(audioCtx.destination);
 
-  // CRITICAL: In Electron/Chrome, if a ScriptProcessor isn't connected to the destination,
-  // the 'onaudioprocess' event might completely stop firing or output zeroed arrays.
-  sourceNode.connect(processor);
-  processor.connect(audioCtx.destination);
+  workletNode.port.onmessage = (e) => {
+    if (e.data.type === 'speech') {
+      const merged = e.data.buffer as Float32Array;
+      const durationSeconds = merged.length / audioCtx.sampleRate;
+      
+      if (durationSeconds > 0.5) {
+        const downsampled = resampleAudio(
+          merged,
+          audioCtx.sampleRate,
+          16000,
+        );
 
-  let audioBuffer: Float32Array[] = [];
-  let silenceFrames = 0;
+        const wavBlob = float32ToWav(downsampled, 16000);
+        const audioUrl = URL.createObjectURL(wavBlob);
 
-  const SILENCE_THRESHOLD = 0.005;
-  const MAX_SILENCE_FRAMES = 5; // ~1.25 seconds of silence
+        const debugName = `${sourceName} - ${durationSeconds.toFixed(1)}s`;
+        addDebugAudio(debugName, audioUrl);
+        addLog(`Captured ${debugName}, sending to AI...`);
 
-  processor.onaudioprocess = (e) => {
-    const input = e.inputBuffer.getChannelData(0);
-
-    let sum = 0;
-    for (let i = 0; i < input.length; i++) {
-      sum += input[i] * input[i];
-    }
-
-    const rms = Math.sqrt(sum / input.length);
-
-    if (rms > SILENCE_THRESHOLD) {
-      silenceFrames = 0;
-      audioBuffer.push(new Float32Array(input));
-    } else {
-      if (audioBuffer.length > 0) {
-        silenceFrames++;
-        if (silenceFrames >= MAX_SILENCE_FRAMES) {
-          const totalLength = audioBuffer.reduce(
-            (acc, val) => acc + val.length,
-            0,
-          );
-          const merged = new Float32Array(totalLength);
-          let offset = 0;
-          for (const buffer of audioBuffer) {
-            merged.set(buffer, offset);
-            offset += buffer.length;
-          }
-
-          const durationSeconds = totalLength / audioCtx.sampleRate;
-          if (durationSeconds > 0.5) {
-            const downsampled = resampleAudio(
-              merged,
-              audioCtx.sampleRate,
-              16000,
-            );
-
-            const wavBlob = float32ToWav(downsampled, 16000);
-            const audioUrl = URL.createObjectURL(wavBlob);
-
-            const debugName = `${sourceName} - ${durationSeconds.toFixed(1)}s`;
-            addDebugAudio(debugName, audioUrl);
-            addLog(`Captured ${debugName}, sending to AI...`);
-
-            // CRITICAL FIX: To prevent the array from being flattened into an object by postMessage,
-            // we must pass the Float32Array's underlying buffer, and specify it in the transfer list.
-            workerRef.current?.postMessage({
-              type: "transcribe",
-              audio: downsampled, // Transformers.js can ingest this directly if properly typed
-              source: sourceName,
-              audioUrl,
-            });
-          }
-
-          audioBuffer = [];
-          silenceFrames = 0;
-        }
+        workerRef.current?.postMessage({
+          type: "transcribe",
+          audio: downsampled,
+          source: sourceName,
+          audioUrl,
+        });
       }
     }
   };

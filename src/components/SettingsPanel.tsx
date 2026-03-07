@@ -353,14 +353,14 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
         </Section>
 
         {/* Manage Prompts */}
-        <div className="mt-4 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+        {/* <div className="mt-4 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
           <div className="flex items-center justify-between">
             <span className="text-white/60">Manage Prompts</span>
             <span className="text-[9px] px-2 py-0.5 rounded-full bg-accent/15 text-accent/80 font-semibold">
               Open
             </span>
           </div>
-        </div>
+        </div> */}
 
         {/* Shortcuts */}
         <div className="mt-5">
@@ -375,10 +375,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
         </div>
 
         {/* Bottom buttons */}
-        <div className="mt-5 pt-4 border-t border-white/[0.06] grid grid-cols-2 gap-2">
-          <BottomButton label="Dashboard" />
-          <BottomButton label="Tutorial" />
-          <BottomButton label="Log out" />
+        <div className="mt-5 pt-4 border-t border-white/[0.06] grid grid-cols-1 gap-2">
           <BottomButton label="Quit" onClick={() => window.close()} />
         </div>
       </div>

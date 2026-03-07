@@ -89,6 +89,21 @@ function createMainWindow(): BrowserWindow {
   return win;
 }
 
+function toggleWindowVisibility() {
+  if (mainWindow) {
+    const isHidden = mainWindow.getOpacity() === 0;
+    if (isHidden) {
+      mainWindow.setOpacity(1);
+      mainWindow.setIgnoreMouseEvents(true, { forward: true });
+      mainWindow.focus();
+    } else {
+      mainWindow.setOpacity(0);
+      mainWindow.blur();
+      mainWindow.setIgnoreMouseEvents(true, { forward: false });
+    }
+  }
+}
+
 function createTray(): Tray {
   const icon = nativeImage.createFromDataURL(
     "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAY0lEQVR4nGNgGAXDBTAiC/z//5/h////DIyMjAxMTEwMYPr/fwYGBgYGBkZGRgYmRiADyIYJMDExAeUYGRmgcowgGsgGqWFkZASpYWJiAqthBOrBAKgaGA3igzCQP7xdMwoAAD6OI0GqswYnAAAAAElFTkSuQmCC",
@@ -100,11 +115,7 @@ function createTray(): Tray {
   const contextMenu = Menu.buildFromTemplate([
     {
       label: "Show/Hide Ghostly",
-      click: () => {
-        if (mainWindow) {
-          mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show();
-        }
-      },
+      click: toggleWindowVisibility,
     },
     {
       label: "Capture Screen",
@@ -122,11 +133,7 @@ function createTray(): Tray {
   ]);
 
   t.setContextMenu(contextMenu);
-  t.on("click", () => {
-    if (mainWindow) {
-      mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show();
-    }
-  });
+  t.on("click", toggleWindowVisibility);
 
   return t;
 }
@@ -139,23 +146,34 @@ app.whenReady().then(() => {
 
   // Mouse enable/disable for click-through
   ipcMain.on("ghostly:enable-mouse", () => {
-    if (mainWindow) mainWindow.setIgnoreMouseEvents(false);
+    // Only enable if window is actually "visible"
+    if (mainWindow && mainWindow.getOpacity() > 0) {
+      mainWindow.setIgnoreMouseEvents(false);
+    }
   });
 
   ipcMain.on("ghostly:disable-mouse", () => {
-    if (mainWindow) mainWindow.setIgnoreMouseEvents(true, { forward: true });
+    // Only forward hover events if window is actually "visible"
+    if (mainWindow) {
+      const isVisible = mainWindow.getOpacity() > 0;
+      mainWindow.setIgnoreMouseEvents(true, { forward: isVisible });
+    }
   });
 
   // Window control
   ipcMain.on("ghostly:hide", () => {
-    if (mainWindow) mainWindow.hide();
+    if (mainWindow) {
+      mainWindow.setOpacity(0);
+      mainWindow.blur();
+      mainWindow.setIgnoreMouseEvents(true, { forward: false });
+    }
   });
 
   ipcMain.on("ghostly:show", () => {
     if (mainWindow) {
-      mainWindow.show();
+      mainWindow.setOpacity(1);
+      mainWindow.setIgnoreMouseEvents(true, { forward: true });
       mainWindow.focus();
-      // Stealth is re-applied automatically via the 'show' event listener
     }
   });
 

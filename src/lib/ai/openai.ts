@@ -8,7 +8,7 @@ export class OpenAIProvider implements AIProvider {
   }
 
   async *streamSolution(options: AIRequestOptions): AsyncGenerator<string> {
-    const { base64Image, prompt, model, apiKey, maxTokens = 4096 } = options;
+    const { base64Image, prompt, messages = [], model, apiKey, maxTokens = 4096 } = options;
 
     const imageUrl = base64Image?.startsWith("data:")
       ? base64Image
@@ -16,12 +16,21 @@ export class OpenAIProvider implements AIProvider {
         ? `data:image/png;base64,${base64Image}`
         : undefined;
 
-    const content = imageUrl
-      ? [
-          { type: "image_url", image_url: { url: imageUrl } },
-          { type: "text", text: prompt },
-        ]
-      : [{ type: "text", text: prompt }];
+    const apiMessages = messages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    const currentContent: any[] = [];
+    if (imageUrl) {
+      currentContent.push({ type: "image_url", image_url: { url: imageUrl } });
+    }
+    currentContent.push({ type: "text", text: prompt });
+
+    apiMessages.push({
+      role: "user",
+      content: currentContent as any, // OpenAI accepts array of parts for the new message
+    });
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -33,12 +42,7 @@ export class OpenAIProvider implements AIProvider {
         model,
         max_tokens: maxTokens,
         stream: true,
-        messages: [
-          {
-            role: "user",
-            content,
-          },
-        ],
+        messages: apiMessages,
       }),
     });
 

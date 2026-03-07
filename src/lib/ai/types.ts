@@ -7,6 +7,7 @@ export interface AIRequestOptions {
   base64Image?: string;
   mimeType?: string;
   prompt: string;
+  messages?: { role: "user" | "assistant"; content: string }[];
   model: string;
   apiKey: string;
   maxTokens?: number;

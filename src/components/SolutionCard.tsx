@@ -38,8 +38,25 @@ export const SolutionCard: React.FC<SolutionCardProps> = ({
         const blockId = `code-${codeString.slice(0, 20)}`;
 
         if (match) {
+          // PERF: Do not run Prism SyntaxHighlighter on every keystroke during stream.
+          // It causes massive React re-renders and CPU spikes, which drops audio frames.
+          if (isStreaming) {
+            return (
+              <div className="relative group my-3 rounded-lg overflow-hidden border border-dark-700">
+                <div className="flex items-center justify-between px-4 py-2 bg-dark-950 border-b border-dark-700">
+                  <span className="text-xs font-mono text-dark-400">
+                    {match[1]} (streaming...)
+                  </span>
+                </div>
+                <div className="p-4 overflow-x-auto" style={{ background: "rgba(20, 20, 23, 0.4)", fontSize: "13px", lineHeight: "1.6" }}>
+                  <pre className="m-0 text-white/80 font-mono whitespace-pre">{codeString}</pre>
+                </div>
+              </div>
+            );
+          }
+
           return (
-            <div className="relative group my-3 rounded-lg overflow-hidden">
+            <div className="relative group my-3 rounded-lg overflow-hidden border border-dark-700">
               <div className="flex items-center justify-between px-4 py-2 bg-dark-950 border-b border-dark-700">
                 <span className="text-xs font-mono text-dark-400">
                   {match[1]}
@@ -58,8 +75,7 @@ export const SolutionCard: React.FC<SolutionCardProps> = ({
                 customStyle={{
                   margin: 0,
                   borderRadius: 0,
-                  background: "rgba(20, 20, 23, 0)",
-                  backdropFilter: "blur(24px)",
+                  background: "rgba(20, 20, 23, 0.4)",
                   fontSize: "13px",
                   lineHeight: "1.6",
                 }}
@@ -129,7 +145,7 @@ export const SolutionCard: React.FC<SolutionCardProps> = ({
         </strong>
       ),
     }),
-    [copiedBlock],
+    [copiedBlock, isStreaming],
   );
 
   if (!content) return null;
