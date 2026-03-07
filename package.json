@@ -1,6 +1,6 @@
 {
   "name": "ghostly",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Stealth AI coding assistant for technical interviews",
   "main": "./out/main/index.js",
   "author": "Ghostly",
