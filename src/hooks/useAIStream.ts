@@ -48,7 +48,7 @@ export function useAIStream() {
         const stream = provider.streamSolution({
           base64Image: screenshot,
           prompt,
-          model: settings.activeModel,
+          model: settings.models?.[settings.activeProvider] ?? "",
           apiKey,
           mimeType: "image/png",
         });
@@ -65,7 +65,7 @@ export function useAIStream() {
           screenshotBase64: screenshot,
           solution: fullSolution,
           provider: settings.activeProvider,
-          model: settings.activeModel,
+          model: settings.models?.[settings.activeProvider] ?? "",
           interviewType: settings.interviewType,
           language: settings.language,
         };

@@ -1,4 +1,8 @@
 import type { AIProvider, AIRequestOptions } from "./types";
+import {
+  fetchWithDiagnostics,
+  withModelHint,
+} from "./fetchWithDiagnostics";
 
 export class AnthropicProvider implements AIProvider {
   name = "anthropic";
@@ -11,15 +15,40 @@ export class AnthropicProvider implements AIProvider {
     ];
   }
 
+  async fetchModels(apiKey: string): Promise<string[]> {
+    const res = await fetchWithDiagnostics(
+      "https://api.anthropic.com/v1/models",
+      {
+        method: "GET",
+        headers: {
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true",
+        },
+      },
+      { provider: "anthropic", model: "(list)", apiKey },
+    );
+    if (!res.ok) {
+      throw new Error(
+        `Anthropic models error: ${res.status} ${res.statusText}`,
+      );
+    }
+    const data = await res.json();
+    return (data?.data ?? []).map((m: any) => m.id as string).sort();
+  }
+
   async *streamSolution(options: AIRequestOptions): AsyncGenerator<string> {
     const {
       base64Image,
       mimeType = "image/png",
       prompt,
+      system,
       messages = [],
       model,
       apiKey,
       maxTokens = 4096,
+      signal,
+      meta,
     } = options;
 
     const imageData = base64Image?.includes(",")
@@ -49,28 +78,37 @@ export class AnthropicProvider implements AIProvider {
       content: currentContent as any,
     });
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-        "anthropic-dangerous-direct-browser-access": "true",
-        "Content-Type": "application/json",
+    const response = await fetchWithDiagnostics(
+      "https://api.anthropic.com/v1/messages",
+      {
+        method: "POST",
+        headers: {
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: maxTokens,
+          stream: true,
+          // Anthropic's dedicated system slot — higher priority than messages.
+          ...(system?.trim() ? { system } : {}),
+          messages: apiMessages,
+        }),
+        signal,
       },
-      body: JSON.stringify({
-        model,
-        max_tokens: maxTokens,
-        stream: true,
-        messages: apiMessages,
-      }),
-    });
+      { provider: "anthropic", model, apiKey },
+    );
 
     if (!response.ok) {
       const err = await response
         .json()
         .catch(() => ({ error: { message: response.statusText } }));
       throw new Error(
-        `Anthropic API error: ${err.error?.message || response.statusText}`,
+        withModelHint(
+          `Anthropic API error: ${err.error?.message || response.statusText}`,
+        ),
       );
     }
 
@@ -90,8 +128,14 @@ export class AnthropicProvider implements AIProvider {
         if (line.startsWith("data: ")) {
           try {
             const data = JSON.parse(line.slice(6));
-            if (data.type === "content_block_delta") {
+            if (data.type === "content_block_delta" && data.delta?.text) {
               yield data.delta.text;
+            }
+            if (data.type === "message_delta" && data.delta?.stop_reason && meta) {
+              meta.finishReason = data.delta.stop_reason;
+            }
+            if (data.type === "error" && meta) {
+              meta.blockReason = data.error?.message ?? "anthropic stream error";
             }
           } catch {
             /* skip malformed chunks */

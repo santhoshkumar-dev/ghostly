@@ -31,6 +31,11 @@ const providerColors: Record<
     text: "text-purple-400",
     glow: "shadow-purple-500/20",
   },
+  openrouter: {
+    bg: "bg-sky-500/15",
+    text: "text-sky-400",
+    glow: "shadow-sky-500/20",
+  },
 };
 
 const providerLabels: Record<ProviderName, string> = {
@@ -38,6 +43,7 @@ const providerLabels: Record<ProviderName, string> = {
   openai: "OpenAI",
   anthropic: "Claude",
   groq: "Groq",
+  openrouter: "OpenRouter",
 };
 
 const providerIcons: Record<ProviderName, string> = {
@@ -45,6 +51,7 @@ const providerIcons: Record<ProviderName, string> = {
   openai: "◈",
   anthropic: "◉",
   groq: "⚡",
+  openrouter: "◎",
 };
 
 export const ProviderBadge: React.FC<ProviderBadgeProps> = ({

@@ -121,7 +121,10 @@ export const Settings: React.FC = () => {
     const models = provider.listModels();
     updateSettings({
       activeProvider: providerId,
-      activeModel: models[0],
+      models: {
+        ...settings.models,
+        [providerId]: settings.models?.[providerId] || models[0],
+      },
     });
   };
 
@@ -258,10 +261,19 @@ export const Settings: React.FC = () => {
                           Model
                         </label>
                         <select
-                          value={isActive ? settings.activeModel : models[0]}
+                          value={
+                            isActive
+                              ? settings.models?.[providerId] || models[0]
+                              : models[0]
+                          }
                           onChange={(e) => {
                             if (isActive) {
-                              updateSettings({ activeModel: e.target.value });
+                              updateSettings({
+                                models: {
+                                  ...settings.models,
+                                  [providerId]: e.target.value,
+                                },
+                              });
                             }
                           }}
                           className="input-field no-drag"

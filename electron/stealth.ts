@@ -63,6 +63,11 @@ function readHWND(hwndBuffer: Buffer): number {
 /**
  * Apply the strongest available capture exclusion to a BrowserWindow.
  * MUST be called on every win.show() — the affinity can be lost on hide/show cycles.
+ *
+ * This is the production path and its behaviour is UNCHANGED. The
+ * screen-visibility toggle calls this only while the mode is `hidden`; the
+ * `visible` mode calls {@link removeStealthMode} instead. Both go through the
+ * one `SetWindowDisplayAffinity` binding above.
  */
 export function applyStealthMode(win: BrowserWindow): void {
   // Always set Electron's built-in protection as baseline (uses WDA_MONITOR internally)
@@ -83,8 +88,13 @@ export function applyStealthMode(win: BrowserWindow): void {
     // Try strongest flag first — WDA_EXCLUDEFROMCAPTURE (Win10 2004+)
     let success = SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE);
     if (success) {
+      // The mode-change log line is emitted by the visibility controller, which
+      // owns the `visibility=<mode>` contract. This line stays because it names
+      // the ACTUAL flag in force, which the mode line deliberately does not
+      // (the same mode can resolve to different flags on different Windows
+      // builds, and that detail is diagnostic, not policy).
       console.log(
-        "[Ghostly Stealth] ✅ WDA_EXCLUDEFROMCAPTURE applied — fully invisible to capture",
+        "[Ghostly Stealth] WDA_EXCLUDEFROMCAPTURE active — excluded from capture",
       );
       return;
     }
@@ -93,13 +103,13 @@ export function applyStealthMode(win: BrowserWindow): void {
     success = SetWindowDisplayAffinity(hwnd, WDA_MONITOR);
     if (success) {
       console.log(
-        "[Ghostly Stealth] ⚠️ WDA_MONITOR applied — standard stealth",
+        "[Ghostly Stealth] WDA_MONITOR active — excluded from most capture APIs",
       );
       return;
     }
 
     console.warn(
-      "[Ghostly Stealth] ❌ SetWindowDisplayAffinity failed, relying on Electron fallback",
+      "[Ghostly Stealth] SetWindowDisplayAffinity failed, relying on Electron fallback",
     );
   } catch (err) {
     console.warn("[Ghostly Stealth] FFI call error:", err);
@@ -108,6 +118,12 @@ export function applyStealthMode(win: BrowserWindow): void {
 
 /**
  * Remove capture exclusion (restore normal window behavior).
+ *
+ * This is the `visible` half of the dev-only screen-visibility toggle. It is
+ * NOT a second mechanism: it calls the same
+ * `SetWindowDisplayAffinity` entry point as {@link applyStealthMode}, with
+ * `WDA_NONE`. The single Win32 function below is the only thing in Ghostly that
+ * touches capture exclusion.
  */
 export function removeStealthMode(win: BrowserWindow): void {
   win.setContentProtection(false);

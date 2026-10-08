@@ -4,6 +4,7 @@ import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { motion } from "framer-motion";
+import { gs } from "../lib/overlaySurfaces";
 
 interface SolutionCardProps {
   content: string;
@@ -48,7 +49,7 @@ export const SolutionCard: React.FC<SolutionCardProps> = ({
                     {match[1]} (streaming...)
                   </span>
                 </div>
-                <div className="p-4 overflow-x-auto" style={{ background: "rgba(20, 20, 23, 0.4)", fontSize: "13px", lineHeight: "1.6" }}>
+                <div className="p-4 overflow-x-auto" style={{ ...gs("20 20 23", 0.4, "255 255 255", 0.08, false), fontSize: "13px", lineHeight: "1.6" }}>
                   <pre className="m-0 text-white/80 font-mono whitespace-pre">{codeString}</pre>
                 </div>
               </div>
@@ -75,7 +76,11 @@ export const SolutionCard: React.FC<SolutionCardProps> = ({
                 customStyle={{
                   margin: 0,
                   borderRadius: 0,
-                  background: "rgba(20, 20, 23, 0.4)",
+                  // Alpha-aware so a transparent Ghostly does not leave code
+                  // blocks floating over the interview window. The syntax
+                  // colours themselves are untouched.
+                  backgroundColor: gs("20 20 23", 0.4, "255 255 255", 0.08, false)
+                    .backgroundColor,
                   fontSize: "13px",
                   lineHeight: "1.6",
                 }}
@@ -148,7 +153,9 @@ export const SolutionCard: React.FC<SolutionCardProps> = ({
     [copiedBlock, isStreaming],
   );
 
-  if (!content) return null;
+  // Never render an empty card: a blank answer used to look like nothing
+  // happened at all. Whitespace-only counts as empty.
+  if (!content || !content.trim()) return null;
 
   return (
     <motion.div

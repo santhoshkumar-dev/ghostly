@@ -19,3 +19,11 @@ export async function captureFullScreen(): Promise<string> {
 
   return sources[0].thumbnail.toDataURL();
 }
+
+
+// ── Manual capture only ──────────────────────────────────────────────────────
+// The GDI region reader (captureRegionBgra) and its pixel caps existed ONLY for
+// the automatic Live Screen watcher, which was removed together with
+// "Auto-detect new question". Screenshots are MANUAL: the Capture Screen button
+// and Ctrl+Shift+S both go through ghostly:capture-fullscreen →
+// captureFullScreen() above — one implementation, one IPC route.

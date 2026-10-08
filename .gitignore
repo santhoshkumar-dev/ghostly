@@ -20,6 +20,23 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Debug audio — recorded interview audio, never committed.
+# See src/lib/debugWav.ts (dev-only, opt-in).
+debug-audio/
+*.wav
+
+# Screenshots dropped in for the OCR benchmark — real screen contents, which
+# can include anything the user had open, and never part of the source.
+# A folder rule rather than `*.png`: the repo legitimately tracks PNGs
+# (README screenshots under assets/screenshots/), so a global extension rule
+# would ignore those too.
+screenshots/
+
+# ASR evaluation models — hundreds of MB, fetched on demand, never bundled.
+# The Parakeet int8 encoder alone is ~620 MB. Downloaded from the official
+# k2-fsa/sherpa-onnx release; see tests/fixtures/asr/README.md.
+models/
+
 # IDE/Editor
 .vscode/
 .idea/

@@ -3,10 +3,40 @@
 @tailwind utilities;
 
 @layer base {
+  /*
+   * ── Ghostly's own transparency ────────────────────────────────────────────
+   *
+   * One knob, applied to Ghostly's SURFACES only. Panels, borders and washes
+   * multiply their design alpha by this value; text colours are deliberately
+   * left alone, which is the entire point (see `electron/overlayOpacity.ts` for
+   * why window-level opacity was rejected: it dims text too).
+   *
+   * Declared on `:root` with the shipped default so the overlay is styled
+   * correctly before any JavaScript runs — a first frame at the wrong alpha
+   * would be visible on every cold start.
+   */
+  :root {
+    --ghostly-alpha: 0.85;
+  }
+
   * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    /*
+      Load-bearing, not cosmetic.
+      The !important on every element is what guarantees the normal Windows
+      cursor can never be replaced anywhere in the interview overlay — a single
+      component declaring a crosshair or a "none" cursor would otherwise paint a
+      permanent "+" (or no cursor at all) over the whole interview UI, which is
+      the defect this rule exists to prevent. It also outranks Tailwind's
+      non-important cursor-pointer utilities, so buttons show the normal arrow;
+      that is the Windows default and is what "the normal pointer/cursor" means
+      here.
+      The one place a selection cursor is allowed is the Region Picker, and that
+      is a separate window with its own document — not affected by this rule,
+      and scoped there to an actual drag in progress.
+    */
     cursor: default !important;
   }
 
@@ -44,6 +74,41 @@
 }
 
 @layer components {
+  /*
+   * ── Alpha-aware surfaces ──────────────────────────────────────────────────
+   *
+   * `rgb(var(--gs-rgb) / calc(var(--gs-a) * var(--ghostly-alpha)))` — a site's
+   * design colour and design alpha, both declared inline, multiplied by the
+   * user's transparency.
+   *
+   * Modern space-separated `rgb()` syntax rather than the legacy comma form
+   * because `calc()` inside a legacy alpha component is not portable; Chromium
+   * 130 (Electron 33) supports the space form natively.
+   *
+   * `--gs-b` is the matching border alpha. Text inside a `.gs` element is NOT
+   * touched, so answer text stays fully legible at 20%.
+   */
+  .gs {
+    background-color: rgb(
+      var(--gs-rgb, 30 30 30) / calc(var(--gs-a, 0.92) * var(--ghostly-alpha))
+    );
+  }
+  .gs-b {
+    border-color: rgb(255 255 255 / calc(var(--gs-b, 0.08) * var(--ghostly-alpha)));
+  }
+  /*
+   * The opacity control itself must stay usable at every value, so it opts out
+   * of the global alpha and keeps a floor. A control you cannot read or aim at
+   * is not a usable control, and this is the one element whose whole job is to
+   * change the alpha.
+   */
+  .gs-control {
+    background-color: rgb(
+      30 30 30 / calc(max(0.82, var(--ghostly-alpha)))
+    );
+    border-color: rgb(255 255 255 / 0.22);
+  }
+
   .glass {
     background: rgba(0, 0, 0, 0.55);
     backdrop-filter: blur(24px);

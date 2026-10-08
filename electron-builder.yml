@@ -9,12 +9,46 @@ files:
   - "!electron/*"
   - "!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}"
   - "!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}"
+  # The ~631 MB ASR model is NEVER bundled. It is downloaded into userData on
+  # demand (see electron/parakeetModel.ts). Shipping it would put half a
+  # gigabyte into every installer for a feature most users never enable, and
+  # would make the installer itself the thing that decides which engine you get.
+  - "!models/**"
+  - "!debug-audio/**"
+  # `out/**` (the build output, including parakeetWorker.cjs) is included by
+  # default. src/ and electron/ are excluded above because they are inputs, not
+  # runtime code.
 asarUnpack:
   - resources/**
+  # ── Native code MUST be unpacked ──────────────────────────────────────────
+  # A `.node` addon cannot be dlopen'd from inside an asar archive, and a DLL
+  # sitting next to it cannot be found either. electron-builder detects many
+  # native modules automatically, but the sherpa packages are loaded by a
+  # RUNTIME path probe (`sherpa-onnx-node/addon.js` walks a list of candidate
+  # paths) rather than a plain require, so the automatic detection does not
+  # cover them. Listing them explicitly is what makes the addon findable in the
+  # packaged app rather than only in development.
+  - node_modules/sherpa-onnx-node/**
+  - node_modules/sherpa-onnx-win-x64/**
+  # The utility-process entry point is forked directly by Electron with a real
+  # Node runtime, which cannot execute a script from inside the archive.
+  - out/main/parakeetWorker.cjs
+  # Belt and braces for any other native dependency: an addon that cannot be
+  # unpacked cannot be loaded, and the failure surfaces as a missing feature
+  # rather than an error.
+  - "**/*.node"
+  - "**/*.dll"
 win:
   executableName: Ghostly
   target:
+    # `dir` is included alongside the installer so the packaged tree can be
+    # launched directly from `dist/win-unpacked`. Verifying an ASAR-packed
+    # native addon means running the real packaged app, and an installer would
+    # have to be installed (and later uninstalled) to do that.
     - target: nsis
+      arch:
+        - x64
+    - target: dir
       arch:
         - x64
 nsis:

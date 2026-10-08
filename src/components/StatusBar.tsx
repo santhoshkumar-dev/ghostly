@@ -13,7 +13,7 @@ export const StatusBar: React.FC = () => {
           isActive={isStreaming}
         />
         <span className="text-xs text-dark-500 font-mono">
-          {settings.activeModel}
+          {settings.models?.[settings.activeProvider]}
         </span>
       </div>
 

@@ -16,5 +16,15 @@
     "isolatedModules": true,
     "types": ["electron-vite/node"]
   },
-  "include": ["electron/**/*.ts", "electron.vite.config.ts"]
+  "include": [
+    "electron/**/*.ts",
+    "electron.vite.config.ts",
+    "src/lib/groqWhisper.ts",
+    "src/lib/parakeetHost.ts",
+    "src/lib/parakeetModelFacts.ts",
+    "src/lib/systemMemory.ts",
+    "src/lib/debugClipSave.ts",
+    "src/lib/sessionContext.ts",
+    "src/lib/conversationThread.ts"
+  ]
 }

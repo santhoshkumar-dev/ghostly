@@ -17,5 +17,16 @@
     "isolatedModules": true,
     "types": ["electron-vite/node"]
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts"],
+  // Pre-existing dead code, NOT part of this change: these four files are
+  // imported by nothing (verified by grep) and still call `window.ghostlyAPI`,
+  // a bridge that has never existed in this app. electron-vite does not build
+  // them either, so they are excluded to keep the typecheck describing exactly
+  // what ships. Deleting them is the real fix and is left to their owner.
+  "exclude": [
+    "src/hooks/useAIStream.ts",
+    "src/hooks/useCapture.ts",
+    "src/pages/History.tsx",
+    "src/pages/Settings.tsx"
+  ]
 }

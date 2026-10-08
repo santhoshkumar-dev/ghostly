@@ -1,0 +1,125 @@
+{
+  "$comment": "Real interview question corpus for the ASR benchmark. The WAV clips are LOCAL ONLY and are never committed (.gitignore excludes *.wav). See README.md in this directory for how to record them.",
+  "format": {
+    "sampleRate": 16000,
+    "channels": 1,
+    "bitsPerSample": 16,
+    "container": "WAV (PCM)",
+    "note": "Every clip MUST be 16 kHz, mono, 16-bit PCM WAV. Moonshine, Parakeet and Groq Whisper must all receive the SAME file."
+  },
+  "questions": [
+    {
+      "id": "q01",
+      "file": "q01.wav",
+      "reference": "Why do we use MongoDB?",
+      "technicalTerms": ["MongoDB"]
+    },
+    {
+      "id": "q02",
+      "file": "q02.wav",
+      "reference": "What is Spring Boot?",
+      "technicalTerms": ["Spring Boot"]
+    },
+    {
+      "id": "q03",
+      "file": "q03.wav",
+      "reference": "Explain Docker.",
+      "technicalTerms": ["Docker"]
+    },
+    {
+      "id": "q04",
+      "file": "q04.wav",
+      "reference": "What is dependency injection in Spring Boot?",
+      "technicalTerms": ["dependency injection", "Spring Boot"]
+    },
+    {
+      "id": "q05",
+      "file": "q05.wav",
+      "reference": "How does JWT authentication work?",
+      "technicalTerms": ["JWT", "authentication"]
+    },
+    {
+      "id": "q06",
+      "file": "q06.wav",
+      "reference": "What is the difference between RabbitMQ and Kafka?",
+      "technicalTerms": ["RabbitMQ", "Kafka"]
+    },
+    {
+      "id": "q07",
+      "file": "q07.wav",
+      "reference": "What is the difference between horizontal scaling and vertical scaling?",
+      "technicalTerms": ["horizontal scaling", "vertical scaling"]
+    },
+    {
+      "id": "q08",
+      "file": "q08.wav",
+      "reference": "What is the role of Redis in a backend application?",
+      "technicalTerms": ["Redis"]
+    },
+    {
+      "id": "q09",
+      "file": "q09.wav",
+      "reference": "How would you investigate a 500 error in production?",
+      "technicalTerms": []
+    },
+    {
+      "id": "q10",
+      "file": "q10.wav",
+      "reference": "Your payment service starts failing immediately after deployment. What would you check first?",
+      "technicalTerms": []
+    },
+    {
+      "id": "q11",
+      "file": "q11.wav",
+      "reference": "Suppose your application receives thousands of requests at the same time. How would you scale the backend?",
+      "technicalTerms": []
+    },
+    {
+      "id": "q12",
+      "file": "q12.wav",
+      "reference": "What is Kubernetes?",
+      "technicalTerms": ["Kubernetes"]
+    },
+    {
+      "id": "q13",
+      "file": "q13.wav",
+      "reference": "What is Terraform used for?",
+      "technicalTerms": ["Terraform"]
+    },
+    {
+      "id": "q14",
+      "file": "q14.wav",
+      "reference": "Tell me about the architecture of your project.",
+      "technicalTerms": []
+    },
+    {
+      "id": "q15",
+      "file": "q15.wav",
+      "reference": "Why did you choose MongoDB?",
+      "technicalTerms": ["MongoDB"]
+    }
+  ],
+  "shortSegments": [
+    {
+      "id": "s01",
+      "file": "s01.wav",
+      "reference": "Why not?",
+      "targetSeconds": 0.9,
+      "technicalTerms": []
+    },
+    {
+      "id": "s02",
+      "file": "s02.wav",
+      "reference": "What is Redis?",
+      "targetSeconds": 1.5,
+      "technicalTerms": ["Redis"]
+    },
+    {
+      "id": "s03",
+      "file": "s03.wav",
+      "reference": "Explain the indexing strategy.",
+      "targetSeconds": 2.5,
+      "technicalTerms": []
+    }
+  ]
+}
