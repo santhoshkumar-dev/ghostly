@@ -51,13 +51,13 @@ A powerful desktop application that runs as an invisible overlay, capturing scre
 
 ## ⌨️ Keyboard Shortcuts
 
-| Shortcut            | Action                             |
-| ------------------- | ---------------------------------- |
-| `Ctrl/Cmd + H`      | Capture screenshot & load          |
-| `Ctrl/Cmd + Enter`  | Solve / Ask AI                     |
-| `Ctrl/Cmd + B`      | Toggle show / hide app             |
-| `Ctrl/Cmd + G`      | Start over / clear current session |
-| `Ctrl/Cmd + Arrows` | Move Ghostly window position       |
+| Shortcut            | Action                                 |
+| ------------------- | -------------------------------------- |
+| `Ctrl/Cmd + H`      | Capture the display under the pointer |
+| `Ctrl/Cmd + Enter`  | Solve / Ask AI                        |
+| `Ctrl/Cmd + B`      | Toggle show / hide app                |
+| `Ctrl/Cmd + G`      | Start over / clear current session    |
+| `Ctrl/Cmd + Arrows` | Move Ghostly window position          |
 
 ## 🚀 Quick Start
 
